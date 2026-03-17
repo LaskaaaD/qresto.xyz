@@ -1,0 +1,127 @@
+<%- include('partials/header') %>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero container">
+            <h1>Cyfrowe Menu<br>dla Twojej Restauracji</h1>
+            <p>Nowoczesna platforma SaaS do tworzenia interaktywnych kart dań i kodów QR. Zwiększ sprzedaż i popraw
+                komfort swoich gości bez drukowania papierowych kart.</p>
+            <div class="hero-actions">
+                <a href="#" class="btn btn-primary">Wypróbuj za darmo</a>
+                <a href="#jak-to-dziala" class="btn btn-secondary">Dowiedz się więcej</a>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="jak-to-dziala" class="features">
+            <div class="container">
+                <h2 class="section-title">Jak to działa?</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fa-solid fa-utensils"></i>
+                        </div>
+                        <h3>Stwórz menu</h3>
+                        <p>Wprowadź swoje dania, opisy i ceny w prostym, intuicyjnym edytorze online.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fa-solid fa-qrcode"></i>
+                        </div>
+                        <h3>Wygeneruj QR</h3>
+                        <p>System automatycznie przygotuje unikalne kody QR dla Twoich stolików.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fa-solid fa-check-circle"></i>
+                        </div>
+                        <h3>Gotowe!</h3>
+                        <p>Twoi goście skanują kod telefonem i przeglądają menu bez czekania na obsługę.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benefits Section -->
+        <section id="dlaczego-my" class="benefits container">
+            <h2 class="section-title">Dlaczego warto wybrać QResto?</h2>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fa-solid fa-leaf"></i>
+                    </div>
+                    <div>
+                        <h3>Brak papieru</h3>
+                        <p>Oszczędność na kosztach druku i nowoczesne, ekologiczne podejście do biznesu.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div>
+                        <h3>Szybka aktualizacja</h3>
+                        <p>Zmieniaj ceny, dodawaj dania dnia i ukrywaj niedostępne pozycje w czasie rzeczywistym.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <div>
+                        <h3>Profesjonalny wygląd</h3>
+                        <p>Elegancki design menu dopasowany do identyfikacji wizualnej Twojej marki.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                    </div>
+                    <div>
+                        <h3>Łatwy dostęp</h3>
+                        <p>Brak konieczności instalowania aplikacji. Menu otwiera się błyskawicznie w przeglądarce.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section id="cennik" class="pricing">
+            <div class="container">
+                <h2 class="section-title">Proste plany cenowe</h2>
+                <div class="pricing-grid">
+                    <!-- Free Plan -->
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3>Darmowy</h3>
+                            <h2>0 zł <span>/ miesiąc</span></h2>
+                        </div>
+                        <ul class="pricing-features">
+                            <li><i class="fa-solid fa-check"></i> Do 10 pozycji w menu</li>
+                            <li><i class="fa-solid fa-check"></i> 1 kod QR dla całej restauracji</li>
+                            <li><i class="fa-solid fa-check"></i> Podstawowe statystyki</li>
+                        </ul>
+                        <a href="#" class="btn btn-secondary">Zacznij teraz</a>
+                    </div>
+                    <!-- Pro Plan -->
+                    <div class="pricing-card pro">
+                        <div class="pro-badge">Najpopularniejszy</div>
+                        <div class="pricing-header">
+                            <h3>Pro</h3>
+                            <h2>99 zł <span>/ miesiąc</span></h2>
+                        </div>
+                        <ul class="pricing-features">
+                            <li><i class="fa-solid fa-check"></i> Nielimitowana liczba dań</li>
+                            <li><i class="fa-solid fa-check"></i> Kody QR dla każdego stolika</li>
+                            <li><i class="fa-solid fa-check"></i> Własne logo i kolory</li>
+                            <li><i class="fa-solid fa-check"></i> Zaawansowane statystyki odwiedzin</li>
+                            <li><i class="fa-solid fa-check"></i> Wsparcie priorytetowe</li>
+                        </ul>
+                        <a href="#" class="btn btn-primary">Wybierz Pro</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <%- include('partials/footer') %>

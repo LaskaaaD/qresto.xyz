@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pl"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QResto - Kody QR (QR Generator)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f2a60d",
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#1a1a1a",
+                        "sidebar-dark": "#111111",
+                        "border-dark": "#333333",
+                        "accent-dark": "#2a2a2a"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="flex min-h-screen">
+<!-- Sidebar Navigation -->
+<aside class="w-64 bg-sidebar-dark flex flex-col border-r border-border-dark shrink-0">
+<div class="p-6">
+<div class="flex items-center gap-2 mb-8">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-background-dark font-bold">qr_code_2</span>
+</div>
+<h1 class="text-xl font-black tracking-tight text-white uppercase">QResto</h1>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-accent-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Panel sterowania</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-accent-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="text-sm font-medium">Moje Menu</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">qr_code</span>
+<span class="text-sm font-medium">Kody QR</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-accent-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Ustawienia</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-4 border-t border-border-dark space-y-4">
+<div class="px-3">
+<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Restauracja</p>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-accent-dark flex items-center justify-center overflow-hidden">
+<div class="w-full h-full bg-gradient-to-br from-primary to-orange-700" data-alt="Abstract warm gradient profile placeholder"></div>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-white truncate">Smak</p>
+<p class="text-xs text-slate-400 truncate">Premium Plan</p>
+</div>
+</div>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-400/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span class="text-sm font-medium">Wyloguj się</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-8 lg:p-12 overflow-y-auto">
+<header class="mb-10">
+<h2 class="text-3xl font-black tracking-tight mb-2">Kody QR</h2>
+<p class="text-slate-400 text-lg">Generuj i drukuj kody dla swoich stolików.</p>
+</header>
+<!-- Generator Section -->
+<section class="mb-12">
+<div class="bg-accent-dark border border-border-dark rounded-xl p-8 max-w-2xl">
+<div class="flex flex-col gap-6">
+<div class="space-y-4">
+<label class="block text-sm font-bold text-slate-300 uppercase tracking-wide" for="table-id">
+                            Numer lub nazwa stolika
+                        </label>
+<div class="flex flex-col sm:flex-row gap-4">
+<input class="flex-1 bg-background-dark border-border-dark focus:border-primary focus:ring-primary rounded-lg text-white px-4 py-3 placeholder:text-slate-600 transition-all" id="table-id" placeholder="np. Stolik #5" type="text"/>
+<button class="bg-primary hover:bg-primary/90 text-background-dark font-bold py-3 px-8 rounded-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+<span class="material-symbols-outlined">add_circle</span>
+                                Wygeneruj kod QR
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Active QR Codes Grid -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-xl font-bold">Aktywne stoliki</h3>
+<span class="text-sm text-slate-500 font-medium">8 stolików łącznie</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Card 1 -->
+<div class="bg-accent-dark border border-border-dark rounded-xl p-6 flex flex-col items-center gap-4 hover:border-primary/50 transition-all group">
+<div class="w-full flex justify-between items-center mb-2">
+<span class="text-lg font-bold">Stolik #1</span>
+<span class="text-[10px] font-bold bg-green-500/10 text-green-500 px-2 py-1 rounded uppercase tracking-wider">Aktywny</span>
+</div>
+<div class="bg-white p-4 rounded-lg w-full aspect-square flex items-center justify-center">
+<div class="w-full h-full bg-center bg-no-repeat bg-contain" data-alt="Black and white QR code for table 1" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBQlZO8KTEXowzVEpHfeRdPcYu4TCwyy764uC8GKvc-8mALMDZuuGw4ttx-TByVuBjC81IBNOv8BfVS7mmT1Al6ikMv6chacYuxTvrf0O1h0ErLK6MrS2eWpuxTR9PdKE1PCmI1evQ-eGZxM2iPmTR3O_G_TUu5RDfw3rZa7pIK6Zcq652oDHFG-k99GNK-qj8KZKSJe1mCNX9Sv_uTXiFh95ZZbNsV_YK7928RQVXs6o6bsSjoWxeUhDioHYMsvqXYoMGDpYjSHw");'></div>
+</div>
+<div class="w-full flex gap-3 mt-2">
+<button class="flex-1 border border-primary text-primary hover:bg-primary hover:text-background-dark font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">download</span>
+                            Pobierz
+                        </button>
+<button class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">print</span>
+                            Drukuj
+                        </button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-accent-dark border border-border-dark rounded-xl p-6 flex flex-col items-center gap-4 hover:border-primary/50 transition-all group">
+<div class="w-full flex justify-between items-center mb-2">
+<span class="text-lg font-bold">Stolik #2</span>
+<span class="text-[10px] font-bold bg-green-500/10 text-green-500 px-2 py-1 rounded uppercase tracking-wider">Aktywny</span>
+</div>
+<div class="bg-white p-4 rounded-lg w-full aspect-square flex items-center justify-center">
+<div class="w-full h-full bg-center bg-no-repeat bg-contain" data-alt="Black and white QR code for table 2" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCltMxXGHMhjybEFaNi-mTshGkz2JI9vmbihN1Pi_16cdGV4X5Et8wdroteZyzGw8SvR8WdtbMNsrLNQm3LkqF9PGv74vYL1DUyUapNGtmYcLfpFvrSrZH6hgjGOZU88jrje_ZCkaIUFTWYSwrQTCMzmYH4tYy9a4-PV4FAHvz63BQ45QpPaRLhM7jxaAWbjKD-JMH4664tE8HPUPrhzTZEhG6sB9Wzms3SjYY9UeQYEVeRP2OFfPUYIpVUlZe-NpY8zwsiMUBUOQ");'></div>
+</div>
+<div class="w-full flex gap-3 mt-2">
+<button class="flex-1 border border-primary text-primary hover:bg-primary hover:text-background-dark font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">download</span>
+                            Pobierz
+                        </button>
+<button class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">print</span>
+                            Drukuj
+                        </button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-accent-dark border border-border-dark rounded-xl p-6 flex flex-col items-center gap-4 hover:border-primary/50 transition-all group">
+<div class="w-full flex justify-between items-center mb-2">
+<span class="text-lg font-bold">Stolik #3</span>
+<span class="text-[10px] font-bold bg-green-500/10 text-green-500 px-2 py-1 rounded uppercase tracking-wider">Aktywny</span>
+</div>
+<div class="bg-white p-4 rounded-lg w-full aspect-square flex items-center justify-center">
+<div class="w-full h-full bg-center bg-no-repeat bg-contain" data-alt="Black and white QR code for table 3" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAUeJvoD8K3xZTMU7f1L-ywzDmFjlsVbSa2uT_DnH7wYYO4kRgn0IRM2OEyT9fiIN3DT6iFawubKgFbHLxBHe0u6o7gLgsUsRuPQkKaViuefWcGTbn6mAGnJNiCfpJDg-5PVRRenPRC9KFwPnSje6UGAAZdFIrqJxi4wYgNH9AQuVkL4xreeAaDLPI-QOWOard491DxCW8HCp93Ph2oicHnEggJLNuzxMXnYsPDPA1xUFpi6oIVKFngvPfi_Ph5Nnpt7TC1nIdF6g");'></div>
+</div>
+<div class="w-full flex gap-3 mt-2">
+<button class="flex-1 border border-primary text-primary hover:bg-primary hover:text-background-dark font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">download</span>
+                            Pobierz
+                        </button>
+<button class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">print</span>
+                            Drukuj
+                        </button>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-accent-dark border border-border-dark rounded-xl p-6 flex flex-col items-center gap-4 hover:border-primary/50 transition-all group">
+<div class="w-full flex justify-between items-center mb-2">
+<span class="text-lg font-bold">VIP Room 1</span>
+<span class="text-[10px] font-bold bg-green-500/10 text-green-500 px-2 py-1 rounded uppercase tracking-wider">Aktywny</span>
+</div>
+<div class="bg-white p-4 rounded-lg w-full aspect-square flex items-center justify-center">
+<div class="w-full h-full bg-center bg-no-repeat bg-contain" data-alt="Black and white QR code for VIP Room 1" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAdiDsRrQY_W4aEZUb1QJ981G1LX8HnG0U0MTYn4BrxCGyHbg54IivCjvuw1V-gUA7-0DSTzG-VvlUm0foHhoZ15CEIs5Br7n8j7Q5Hsc4-FsfRkkIYQinoUvmZFoOjtA5rBtlblFz--b7chUHeRHLW4J9nKynpQj2Imk47SDh5Em05ZHTlHNGWWD1NbKW94rjm9erw0KUiAWJwyFpXXoRpBppTYMAVnWB11Qm5QvscphNluYCsa-EdbpnOG3viUf9-D8I32AFuug");'></div>
+</div>
+<div class="w-full flex gap-3 mt-2">
+<button class="flex-1 border border-primary text-primary hover:bg-primary hover:text-background-dark font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">download</span>
+                            Pobierz
+                        </button>
+<button class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm py-2 rounded-lg transition-all flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">print</span>
+                            Drukuj
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pl"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QResto - Rejestracja</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f2a60d",
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#111111",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex min-h-screen w-full">
+<!-- Left Side: Visual/Branding Section -->
+<div class="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+<div class="absolute inset-0 z-10 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent"></div>
+<div class="absolute inset-0 z-10 bg-primary/10 mix-blend-overlay"></div>
+<img alt="Premium restaurant interior with warm lighting" class="absolute inset-0 object-cover w-full h-full scale-105 blur-[2px]" data-alt="Premium restaurant interior with warm lighting and dark furniture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClz84LkE-J-Le4cL7ZpB4vESe-Wr-TzVzu_47JOC4Ir3Rsdr6-m7UfX4oJIyWSyH1swDsXuSQ8CszQ5uqBRgy2kaCmtaqzG1WhFQuTsttaVSDlsy4pqk5plVzudG5U_N2cR6b2onerHP7a8wC-b1IyGuT5JdmSHGNVsPLJUZjNWqaAknlh29wKSW_yLTgnRrttObYj75XB7TiPFUFADQVFGgY274MY8TfSN1fFQpPFNdlOo5aTsFsRhCc73voHhjMjUURgf_mPaQ"/>
+<div class="relative z-20 flex flex-col justify-between p-16 w-full h-full">
+<div class="flex items-center gap-3">
+<div class="bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-background-dark font-bold">restaurant_menu</span>
+</div>
+<h1 class="text-2xl font-black tracking-tight text-white">QResto</h1>
+</div>
+<div class="max-w-md">
+<h2 class="text-4xl font-bold text-white mb-6 leading-tight">Zmień sposób, w jaki Twoi goście zamawiają jedzenie.</h2>
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+<p class="text-slate-200">Błyskawiczne menu kodów QR</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+<p class="text-slate-200">Łatwa edycja potraw i cen</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+<p class="text-slate-200">Zarządzanie zamówieniami w czasie rzeczywistym</p>
+</div>
+</div>
+</div>
+<div class="text-slate-400 text-sm italic">
+                    © 2024 QResto. Wszelkie prawa zastrzeżone.
+                </div>
+</div>
+</div>
+<!-- Right Side: Registration Form Section -->
+<div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 md:p-24 bg-background-light dark:bg-background-dark">
+<div class="w-full max-w-md">
+<!-- Mobile Logo -->
+<div class="lg:hidden flex items-center gap-3 mb-12 justify-center">
+<div class="bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-background-dark font-bold">restaurant_menu</span>
+</div>
+<h1 class="text-2xl font-black tracking-tight dark:text-white">QResto</h1>
+</div>
+<div class="mb-10 text-center lg:text-left">
+<h2 class="text-3xl font-black text-slate-900 dark:text-white mb-3">Dołącz do QResto</h2>
+<p class="text-slate-600 dark:text-slate-400">Załóż darmowe konto i stwórz cyfrowe menu dla swojej restauracji w kilka minut.</p>
+</div>
+<form class="space-y-6">
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1" for="restaurant-name">Nazwa Restauracji</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">store</span>
+<input class="w-full pl-12 pr-4 py-4 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="restaurant-name" placeholder="np. Restauracja Smak" type="text"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1" for="email">E-mail</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">mail</span>
+<input class="w-full pl-12 pr-4 py-4 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="email" placeholder="example@domain.com" type="email"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1" for="password">Hasło</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">lock</span>
+<input class="w-full pl-12 pr-12 py-4 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="password" placeholder="Min. 8 znaków" type="password"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary" type="button">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="flex items-start gap-3 py-2">
+<input class="mt-1 rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent" id="terms" type="checkbox"/>
+<label class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed" for="terms">
+                            Akceptuję <a class="text-primary hover:underline" href="#">Regulamin</a> oraz <a class="text-primary hover:underline" href="#">Politykę Prywatności</a> serwisu QResto.
+                        </label>
+</div>
+<button class="w-full py-4 bg-primary hover:bg-primary/90 text-background-dark font-black rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-primary/20" type="submit">
+                        Załóż darmowe konto
+                    </button>
+</form>
+<div class="mt-10 pt-8 border-t border-slate-200 dark:border-slate-800 text-center">
+<p class="text-slate-600 dark:text-slate-400">
+                        Masz już konto? 
+                        <a class="text-primary font-bold hover:underline ml-1" href="#">Zaloguj się</a>
+</p>
+</div>
+<div class="mt-8 flex justify-center gap-6">
+<button class="p-3 rounded-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-primary transition-colors">
+<svg class="w-5 h-5 dark:fill-white" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+</button>
+<button class="p-3 rounded-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-primary transition-colors">
+<svg class="w-5 h-5 dark:fill-white" fill="currentColor" viewbox="0 0 24 24">
+<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

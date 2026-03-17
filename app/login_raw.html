@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pl"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QResto - Logowanie</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f2a60d",
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#111111",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden">
+<div class="flex h-full w-full">
+<!-- Left Side: Image / Brand Experience -->
+<div class="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-background-dark">
+<div class="absolute inset-0 z-10 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent"></div>
+<div class="absolute inset-0 z-10 bg-primary/10 mix-blend-overlay"></div>
+<img alt="Premium restaurant interior" class="absolute inset-0 object-cover w-full h-full scale-105 blur-[2px]" data-alt="Dark themed luxury restaurant interior with warm lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqZ9nXgzashWKzlFdKCSlySmI0-RMBtuoM5A1Au8IkPo9nGtdzj1_geKNjhupi0tbNlo1150_BIZ55G-o2ONOJnh7M2fxEP2A9xL-fCWwiBpQNuYsm03O2mHzmGn7xdj7Gq00Mdhb2_lVXDEqTtqQ7qx1t101kq2ZSCEqLcUsNRGRsnQLxEciKBhL-lwBDOcDWqHVrf44BU6Xg5gMd-St-ZWOFr1OZ3aG64LP-dOMGb_c5dkIDIrmvyMp1IArj7FqrSCJCnPKsAA"/>
+<div class="relative z-20 flex flex-col justify-end p-16 h-full">
+<div class="flex items-center gap-3 mb-8">
+<div class="bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-background-dark font-bold">restaurant_menu</span>
+</div>
+<h1 class="text-3xl font-black tracking-tighter text-white">QResto</h1>
+</div>
+<blockquote class="max-w-md">
+<p class="text-2xl font-medium text-white leading-relaxed mb-4">"Nowoczesne menu cyfrowe, które zachwyca Twoich gości od pierwszego spojrzenia."</p>
+<footer class="text-primary font-semibold">— Dołącz do setek restauracji</footer>
+</blockquote>
+</div>
+</div>
+<!-- Right Side: Login Form -->
+<div class="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 md:p-16 lg:p-24 bg-background-light dark:bg-background-dark">
+<div class="w-full max-w-md">
+<!-- Mobile Logo -->
+<div class="flex lg:hidden items-center gap-3 mb-12">
+<div class="bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-background-dark font-bold">restaurant_menu</span>
+</div>
+<h1 class="text-2xl font-black tracking-tighter dark:text-white">QResto</h1>
+</div>
+<div class="mb-10">
+<h2 class="text-4xl font-black tracking-tight mb-3 dark:text-white">Witaj ponownie</h2>
+<p class="text-slate-500 dark:text-slate-400">Zaloguj się do swojego panelu zarządzania menu.</p>
+</div>
+<form class="space-y-6">
+<div>
+<label class="block text-sm font-semibold mb-2 dark:text-slate-200" for="email">E-mail</label>
+<input class="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none placeholder:text-slate-400" id="email" placeholder="twoj@email.pl" type="email"/>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="block text-sm font-semibold dark:text-slate-200" for="password">Hasło</label>
+<a class="text-sm font-medium text-slate-500 hover:text-primary transition-colors" href="#">Zapomniałeś hasła?</a>
+</div>
+<div class="relative">
+<input class="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none placeholder:text-slate-400" id="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" type="button">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-5 h-5 rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent" id="remember" type="checkbox"/>
+<label class="text-sm text-slate-600 dark:text-slate-400" for="remember">Zapamiętaj mnie</label>
+</div>
+<button class="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all transform active:scale-[0.98]" type="submit">
+                        Zaloguj się
+                    </button>
+</form>
+<div class="mt-12 text-center">
+<p class="text-slate-600 dark:text-slate-400">
+                        Nie masz konta? 
+                        <a class="text-primary font-bold hover:underline ml-1" href="#">Załóż darmowe konto</a>
+</p>
+</div>
+<!-- Footer Links -->
+<div class="mt-20 pt-8 border-t border-slate-100 dark:border-slate-800 flex justify-center gap-6">
+<a class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors uppercase tracking-widest" href="#">Pomoc</a>
+<a class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors uppercase tracking-widest" href="#">Prywatność</a>
+<a class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors uppercase tracking-widest" href="#">Regulamin</a>
+</div>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html class="dark" lang="pl">
+
+<head>
+    <%- include('partials/dashboard-head') %>
+        <!-- QR Code & ZIP Libraries -->
+        <script type="text/javascript" src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+        <style>
+            @media print {
+                body * {
+                    visibility: hidden;
+                }
+
+                #print-area,
+                #print-area * {
+                    visibility: visible;
+                }
+
+                #print-area {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 20px;
+                }
+
+                .print-card {
+                    break-inside: avoid;
+                    text-align: center;
+                    margin-bottom: 2rem;
+                    font-family: sans-serif;
+                }
+
+                .print-card canvas {
+                    width: 200px !important;
+                    height: 200px !important;
+                    margin: 0 auto;
+                }
+
+                .qr-code-container svg {
+                    width: 100%;
+                    height: 100%;
+                }
+            }
+
+            .qr-code-container svg {
+                width: 100%;
+                height: auto;
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                display: block;
+            }
+        </style>
+</head>
+
+<body class="bg-background-dark text-slate-100 font-display antialiased">
+    <div class="flex h-screen overflow-hidden">
+        <%- include('partials/dashboard-sidebar') %>
+            <main class="flex-1 overflow-y-auto relative">
+                <div class="max-w-6xl mx-auto p-8 lg:p-12 pb-32">
+                    <header class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-3xl font-black tracking-tight mb-2">Kody QR</h2>
+                            <p class="text-slate-400 text-lg">Generuj, personalizuj i drukuj kody dla swoich stolików.
+                            </p>
+                        </div>
+                    </header>
+
+                    <% if (typeof error !=='undefined' && error) { %>
+                        <div
+                            class="mb-6 bg-red-500/10 border border-red-500/30 text-red-500 px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2">
+                            <span class="material-symbols-outlined">error</span>
+                            <%= error %>
+                        </div>
+                        <% } %>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                                <!-- Generator Section -->
+                                <section class="lg:col-span-2">
+                                    <div
+                                        class="bg-sidebar-dark border border-slate-800 rounded-2xl p-8 h-full amber-glow">
+                                        <form action="/qr" method="POST"
+                                            class="flex flex-col gap-6 h-full justify-center">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <div class="space-y-4">
+                                                <div class="flex items-center gap-2 mb-2">
+                                                    <span class="material-symbols-outlined text-primary">add_box</span>
+                                                    <h3 class="text-xl font-bold">Stwórz nowy kod stolika</h3>
+                                                </div>
+                                                <label class="block text-sm font-bold text-slate-400" for="table-id">
+                                                    Numer lub nazwa układu (np. Stolik #5, Taras VIP)
+                                                </label>
+                                                <div class="flex flex-col sm:flex-row gap-4">
+                                                    <input name="name" required
+                                                        class="flex-1 bg-background-dark border border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-white px-4 py-3 placeholder:text-slate-600 transition-all font-medium outline-none"
+                                                        id="table-id" placeholder="np. Stolik #5" type="text" />
+                                                    <button type="submit"
+                                                        class="bg-primary hover:bg-primary/90 text-background-dark font-bold py-3 px-8 rounded-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap shadow-lg shadow-primary/20">
+                                                        <span class="material-symbols-outlined">qr_code</span>
+                                                        Generuj
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </section>
+
+                                <!-- Logo Upload Section -->
+                                <section class="lg:col-span-1">
+                                    <div
+                                        class="bg-sidebar-dark border border-slate-800 rounded-2xl p-6 h-full relative overflow-hidden group">
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                        </div>
+                                        <div class="flex flex-col h-full relative z-10">
+                                            <div class="flex items-start justify-between mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="material-symbols-outlined text-primary">image</span>
+                                                    <h3 class="text-lg font-bold">Logo w kodzie</h3>
+                                                </div>
+                                                <% if (user && user.logo) { %>
+                                                    <div class="flex flex-col items-end gap-1 shrink-0">
+                                                        <form action="/qr/logo/delete" method="POST" class="inline"
+                                                            onsubmit="return confirm('Czy na pewno usunąć wgrany logotyp?');">
+                                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                            <button type="submit"
+                                                                class="text-[10px] font-bold bg-red-500/10 text-red-500 px-3 py-1 rounded hover:bg-red-500/20 transition-colors uppercase cursor-pointer">Usuń</button>
+                                                        </form>
+                                                    </div>
+                                                    <% } %>
+                                            </div>
+                                            <p class="text-sm text-slate-400 mb-4 flex-1">Wgraj logo, które pojawi się w
+                                                samym środku kodu QR.</p>
+
+                                            <!-- Form to upload logo -->
+                                            <form action="/qr/logo?_csrf=<%= encodeURIComponent(csrfToken) %>" method="POST" enctype="multipart/form-data"
+                                                id="logoForm" class="relative w-full aspect-[2/1] mt-auto">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <input type="file" name="logo" accept="image/png, image/jpeg"
+                                                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                                                    onchange="document.getElementById('logoForm').submit()">
+                                                <div
+                                                    class="absolute inset-0 border-2 border-dashed border-slate-700 rounded-lg p-2 text-center hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-1 bg-background-dark/50 z-10">
+                                                    <span
+                                                        class="material-symbols-outlined text-slate-500">upload_file</span>
+                                                    <span class="text-xs font-medium text-slate-300">
+                                                        <%= user && user.logo ? 'Zmień plik' : 'Prześlij logo' %>
+                                                    </span>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <!-- Shape Styling Controls -->
+                            <section
+                                class="mb-8 bg-sidebar-dark border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-primary">palette</span>
+                                    <div>
+                                        <h3 class="font-bold text-slate-100">Kształt kodu QR</h3>
+                                        <p class="text-xs text-slate-400">Wybierz styl kropek pasujący do Twojej
+                                            restauracji</p>
+                                    </div>
+                                </div>
+                                <div class="flex bg-background-dark border border-slate-800 rounded-lg p-1">
+                                    <button onclick="changeStyle('square')" id="btn-style-square"
+                                        class="px-4 py-2 text-sm font-bold rounded-md bg-slate-800 text-white transition-all">Klasyczny</button>
+                                    <button onclick="changeStyle('dots')" id="btn-style-dots"
+                                        class="px-4 py-2 text-sm font-bold rounded-md text-slate-400 hover:text-white transition-all">Kropki</button>
+                                    <button onclick="changeStyle('extra-rounded')" id="btn-style-liquid"
+                                        class="px-4 py-2 text-sm font-bold rounded-md text-slate-400 hover:text-white transition-all">Płynny
+                                        (Liquid)</button>
+                                </div>
+                            </section>
+
+
+
+                            <!-- Active QR Codes Grid -->
+                            <section>
+                                <div
+                                    class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 border-b border-border-subtle pb-4">
+                                    <div class="flex items-center gap-4">
+                                        <h3 class="text-xl font-bold">Twoje stoliki</h3>
+                                        <span
+                                            class="text-sm bg-slate-800 text-primary px-3 py-1 rounded-full font-bold border border-primary/20">
+                                            <%= tables ? tables.length : 0 %> łącznie
+                                        </span>
+                                    </div>
+
+                                    <% if (tables && tables.length> 0) { %>
+                                        <div class="flex items-center gap-3">
+                                            <label class="flex items-center gap-2 cursor-pointer mr-4">
+                                                <input type="checkbox" id="selectAll"
+                                                    onchange="toggleAllCheckboxes(this)"
+                                                    class="w-5 h-5 accent-primary rounded bg-background-dark border-slate-700 cursor-pointer">
+                                                <span class="text-sm font-bold text-slate-300">Zaznacz wszystko</span>
+                                            </label>
+
+                                            <button onclick="downloadSelectedZip()"
+                                                class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all">
+                                                <span class="material-symbols-outlined text-lg">folder_zip</span>
+                                                Pobierz (.zip)
+                                            </button>
+                                            <button onclick="printSelected()"
+                                                class="flex items-center gap-2 border border-primary text-primary hover:bg-primary/10 px-4 py-2 rounded-lg font-bold text-sm transition-all">
+                                                <span class="material-symbols-outlined text-lg">print</span>
+                                                Drukuj
+                                            </button>
+                                        </div>
+                                        <% } %>
+                                </div>
+
+                                <% if (tables && tables.length> 0) { %>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                                        id="qr-grid">
+                                        <% tables.forEach((table, index)=> { %>
+                                            <!-- QR Card -->
+                                            <div
+                                                class="bg-sidebar-dark border border-slate-800 rounded-2xl p-6 flex flex-col items-center hover:border-primary/50 transition-all group relative">
+                                                <div class="absolute top-4 left-4 z-10">
+                                                    <input type="checkbox"
+                                                        class="qr-checkbox w-5 h-5 accent-primary rounded bg-background-dark border-slate-700 cursor-pointer shadow-lg"
+                                                        value="<%= index %>" data-name="<%= table.name %>">
+                                                </div>
+                                                <div
+                                                    class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <form action="/qr/<%= table._id %>/delete" method="POST"
+                                                        onsubmit="return confirm('Czy na pewno chcesz usunąć ten kod?');">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                        <button type="submit"
+                                                            class="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"
+                                                            title="Usuń projekt">
+                                                            <span
+                                                                class="material-symbols-outlined text-sm">delete</span>
+                                                        </button>
+                                                    </form>
+                                                </div>
+
+                                                <div class="w-full text-center mt-2 mb-4">
+                                                    <span class="text-lg font-bold text-white">
+                                                        <%= table.name %>
+                                                    </span>
+                                                </div>
+
+                                                <div
+                                                    class="bg-white p-3 rounded-xl w-full aspect-square flex items-center justify-center border border-slate-700 overflow-hidden">
+                                                    <!-- The library will inject the svg here -->
+                                                    <div class="qr-code-container w-full h-full flex items-center justify-center"
+                                                        data-link="<%= table.link %>" id="qr-<%= index %>"></div>
+                                                </div>
+                                            </div>
+                                            <% }) %>
+                                    </div>
+                                    <% } else { %>
+                                        <div
+                                            class="text-center py-20 flex flex-col items-center bg-sidebar-dark rounded-2xl border border-slate-800 border-dashed">
+                                            <div
+                                                class="size-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                                                <span
+                                                    class="material-symbols-outlined text-primary text-4xl">qr_code_scanner</span>
+                                            </div>
+                                            <h3 class="text-2xl font-bold text-slate-100 mb-2">Brak wygenerowanych kodów
+                                            </h3>
+                                            <p class="text-slate-400 mb-8 max-w-md mx-auto">Wygeneruj swój pierwszy kod
+                                                dla stolika używając interfejsu powyżej. Każdy kod QR jest bezterminowy!
+                                            </p>
+                                        </div>
+                                        <% } %>
+                            </section>
+                </div>
+            </main>
+    </div>
+
+    <!-- Hidden Print Area -->
+    <div id="print-area"></div>
+
+    <script>
+        // Store instances of QR Code Styling to update them without remounting
+        const qrInstances = [];
+        let currentDotStyle = 'square';
+
+        // Setup variables embedded from backend
+        const logoUrl = "<%= user && user.logo ? user.logo : '' %>";
+
+        // Run on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const containers = document.querySelectorAll('.qr-code-container');
+
+            containers.forEach((container, idx) => {
+                const link = container.getAttribute('data-link');
+
+                const qrCode = new QRCodeStyling({
+                    width: 151,
+                    height: 151,
+                    type: "svg",
+                    data: link,
+                    image: logoUrl !== '' ? logoUrl : null,
+                    margin: 10,
+                    qrOptions: {
+                        typeNumber: 0,
+                        mode: "Byte",
+                        errorCorrectionLevel: "H" // Wysoka korekcja żeby logo nie psuło sczytywania
+                    },
+                    imageOptions: {
+                        hideBackgroundDots: true,
+                        imageSize: 0.4,
+                        margin: 10
+                    },
+                    dotsOptions: {
+                        color: "#000000",
+                        type: currentDotStyle
+                    },
+                    backgroundOptions: {
+                        color: "#ffffff",
+                    },
+                    cornersSquareOptions: {
+                        color: "#000000",
+                        type: currentDotStyle === 'square' ? 'square' : 'extra-rounded'
+                    },
+                    cornersDotOptions: {
+                        color: "#000000",
+                        type: currentDotStyle === 'square' ? 'square' : 'dot'
+                    }
+                });
+
+                qrCode.append(container);
+
+                // Usunięcie stałych wymiarów na rzecz 100% CSS
+                setTimeout(() => {
+                    const svg = container.querySelector('svg');
+                    if (svg) {
+                        const w = svg.getAttribute('width') || '151';
+                        const h = svg.getAttribute('height') || '151';
+                        if (!svg.getAttribute('viewBox') && w !== '100%') {
+                            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                        }
+                        svg.setAttribute('width', '100%');
+                        svg.setAttribute('height', '100%');
+                    }
+                }, 50);
+
+                qrInstances.push({ instance: qrCode, link, name: container.parentElement.previousElementSibling.innerText.trim(), id: idx, container: container });
+            });
+        });
+
+        // Function allowing buttons to change styling dynamically on the fly
+        function changeStyle(newStyle) {
+            currentDotStyle = newStyle;
+
+            // UI Toggle logic
+            ['square', 'dots', 'liquid'].forEach(s => {
+                const btn = document.getElementById('btn-style-' + s);
+                if (btn) {
+                    btn.className = "px-4 py-2 text-sm font-bold rounded-md text-slate-400 hover:text-white transition-all";
+                }
+            });
+            const activeBtnId = newStyle === 'extra-rounded' ? 'liquid' : newStyle;
+            document.getElementById('btn-style-' + activeBtnId).className = "px-4 py-2 text-sm font-bold rounded-md bg-slate-800 text-white transition-all";
+
+            // Update all visual graphs
+            qrInstances.forEach(item => {
+                item.instance.update({
+                    dotsOptions: { type: newStyle },
+                    cornersSquareOptions: { type: newStyle === 'square' ? 'square' : 'extra-rounded' },
+                    cornersDotOptions: { type: newStyle === 'square' ? 'square' : 'dot' }
+                });
+
+                // Odświeżenie atrybutów 100% po aktualizacji przez bibliotekę
+                setTimeout(() => {
+                    if (item.container) {
+                        const svg = item.container.querySelector('svg');
+                        if (svg) {
+                            const w = svg.getAttribute('width') || '151';
+                            const h = svg.getAttribute('height') || '151';
+                            if (!svg.getAttribute('viewBox') && w !== '100%') {
+                                svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                            }
+                            svg.setAttribute('width', '100%');
+                            svg.setAttribute('height', '100%');
+                        }
+                    }
+                }, 50);
+            });
+        }
+
+        // Toggle all checkboxes
+        function toggleAllCheckboxes(source) {
+            const checkboxes = document.querySelectorAll('.qr-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        }
+
+        // JSZip bulk download
+        async function downloadSelectedZip() {
+            const checkboxes = document.querySelectorAll('.qr-checkbox:checked');
+            if (checkboxes.length === 0) return alert('Zaznacz najpierw kody do pobrania!');
+
+            const zip = new JSZip();
+            const folder = zip.folder("QResto_Kody_QR");
+
+            for (let i = 0; i < checkboxes.length; i++) {
+                const idx = parseInt(checkboxes[i].value);
+                const qrItem = qrInstances.find(q => q.id === idx);
+
+                if (qrItem) {
+                    // Zwieksz rozmiar na czas generowania dla lepszej jakosci
+                    qrItem.instance.update({ width: 1000, height: 1000 });
+
+                    // Extract base64 representation using await
+                    const blob = await qrItem.instance.getRawData("png");
+                    // Format file name safely
+                    const safeName = qrItem.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    folder.file(`${safeName}.png`, blob);
+
+                    // Przywroc stary, maly rozmiar dla kafelkow interfejsu
+                    qrItem.instance.update({ width: 151, height: 151 });
+                }
+            }
+
+            zip.generateAsync({ type: "blob" }).then(function (content) {
+                saveAs(content, "qresto_stoliki.zip");
+            });
+        }
+
+        // Handle selected printing
+        async function printSelected() {
+            const checkboxes = document.querySelectorAll('.qr-checkbox:checked');
+            if (checkboxes.length === 0) return alert('Zaznacz kody do druku!');
+
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = ''; // clear
+
+            for (let i = 0; i < checkboxes.length; i++) {
+                const idx = parseInt(checkboxes[i].value);
+                const qrItem = qrInstances.find(q => q.id === idx);
+
+                if (qrItem) {
+                    // Zwieksz rozmiar na czas generowania do wydruku dla lepszej jakosci (zapobiegnie pixelom w pdf/papierze)
+                    qrItem.instance.update({ width: 1000, height: 1000 });
+
+                    // Czekij na PNG by upewnic się, ze przeglądarka załaduje je poprawnie
+                    const blobUrl = await qrItem.instance.getRawData("png").then(blob => URL.createObjectURL(blob));
+
+                    const card = document.createElement('div');
+                    card.className = "print-card";
+                    card.innerHTML = `
+                        <h2 style="font-size: 24px; margin-bottom: 15px;">${qrItem.name}</h2>
+                        <img src="${blobUrl}" style="width: 300px; height: 300px;" />
+                        <p style="margin-top: 15px; font-size: 14px; color: #555;">Zeskanuj aby zamówić | 🚀 QResto</p>
+                    `;
+                    printArea.appendChild(card);
+
+                    // Przywroc stary, maly rozmiar dla interfejsu 
+                    qrItem.instance.update({ width: 151, height: 151 });
+                }
+            }
+
+            // Wydaj komende drukowania kiedy render sie skończy
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+    </script>
+</body>
+
+</html>

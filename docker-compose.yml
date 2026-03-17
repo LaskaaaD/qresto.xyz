@@ -1,0 +1,174 @@
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.myresolver.acme.email=${SSL_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge.delaybeforecheck=10"
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    networks:
+      - qresto_net
+
+  mongodb:
+    image: mongo:6.0
+    container_name: qresto_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - qresto_net
+
+  app:
+    image: ${APP_IMAGE:-qresto-app:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    mem_limit: 768m
+    cpus: "1.0"
+    environment:
+      - PORT=3000
+      - MONGODB_URI=${MONGODB_URI}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ROOT_DOMAIN=${ROOT_DOMAIN}
+      - APP_DOMAIN=${APP_DOMAIN}
+      - APP_WWW_DOMAIN=${APP_WWW_DOMAIN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=(Host(`${APP_DOMAIN}`) || Host(`${APP_WWW_DOMAIN}`) || HostRegexp(`{subdomain:[a-z0-9-]+}.${ROOT_DOMAIN}`)) && !Host(`${ZABBIX_DOMAIN}`)"
+      - "traefik.http.routers.app.priority=1"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls.certresolver=myresolver"
+      - "traefik.http.routers.app.tls.domains[0].main=${ROOT_DOMAIN}"
+      - "traefik.http.routers.app.tls.domains[0].sans=*.${ROOT_DOMAIN}"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
+      - "traefik.docker.network=qresto_net"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - qresto_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  zabbix-db:
+    image: postgres:15-alpine
+    container_name: qresto_zabbix_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS}
+      POSTGRES_DB: zabbix
+    volumes:
+      - zabbix_db_data:/var/lib/postgresql/data
+    networks:
+      - qresto_net
+
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    container_name: qresto_zabbix_server
+    restart: unless-stopped
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: ${ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS}
+      POSTGRES_DB: zabbix
+      ZBX_STARTPOLLERS: 10
+      ZBX_STARTHTTPPOLLERS: 5
+      ZBX_STARTTRAPPERS: 5
+    depends_on:
+      - zabbix-db
+    ports:
+      - "127.0.0.1:10051:10051"
+    networks:
+      - qresto_net
+
+  zabbix-agent2:
+    image: zabbix/zabbix-agent2:alpine-7.0-latest
+    container_name: qresto_zabbix_agent2
+    restart: unless-stopped
+    user: root
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_HOSTNAME: ${ZABBIX_HOSTNAME}
+      ZBX_DEBUGLEVEL: 3
+      ZBX_ALLOWUNSAFEUSERPARAM: 1
+    pid: host
+    privileged: true
+    volumes:
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zabbix-server
+    networks:
+      - qresto_net
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    container_name: qresto_zabbix_web
+    restart: unless-stopped
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: ${ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS}
+      POSTGRES_DB: zabbix
+      ZBX_SERVER_HOST: zabbix-server
+      PHP_TZ: Europe/Warsaw
+    depends_on:
+      - zabbix-db
+      - zabbix-server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zabbix.rule=Host(`${ZABBIX_DOMAIN}`)"
+      - "traefik.http.routers.zabbix.priority=100"
+      - "traefik.http.routers.zabbix.entrypoints=websecure"
+      - "traefik.http.routers.zabbix.tls.certresolver=myresolver"
+      - "traefik.http.services.zabbix.loadbalancer.server.port=8080"
+      - "traefik.docker.network=qresto_net"
+    networks:
+      - qresto_net
+
+networks:
+  qresto_net:
+    driver: bridge
+    name: qresto_net
+
+volumes:
+  mongo_data:
+  zabbix_db_data:

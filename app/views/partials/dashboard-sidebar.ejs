@@ -1,0 +1,45 @@
+<aside class="w-64 bg-sidebar-dark border-r border-primary/10 flex flex-col shrink-0">
+    <div class="p-8">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 flex-shrink-0 bg-primary rounded-lg flex items-center justify-center">
+                <span class="material-symbols-outlined text-background-dark font-bold text-xl">qr_code_2</span>
+            </div>
+            <h1 class="text-xl font-black tracking-tight text-white uppercase">QResto</h1>
+        </div>
+    </div>
+    <nav class="flex-1 px-4 space-y-2 mt-4">
+        <% const navItems=[ { path: '/dashboard' , icon: 'dashboard' , label: 'Panel sterowania' }, { path: '/menu' ,
+            icon: 'menu_book' , label: 'Moje Menu' }, { path: '/qr' , icon: 'qr_code_2' , label: 'Kody QR' }, {
+            path: '#' , icon: 'settings' , label: 'Ustawienia' } ]; %>
+            <% navItems.forEach(item=> { %>
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg <%= activePage === item.path ? 'bg-primary text-sidebar-dark font-bold shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-primary hover:bg-primary/5 transition-all' %>"
+                    href="<%= item.path %>">
+                    <span class="material-symbols-outlined">
+                        <%= item.icon %>
+                    </span>
+                    <span class="text-sm <%= activePage === item.path ? '' : 'font-medium' %>">
+                        <%= item.label %>
+                    </span>
+                </a>
+                <% }) %>
+    </nav>
+    <div class="p-6 border-t border-slate-800/50">
+        <div class="flex items-center gap-3 px-2 mb-4">
+            <div
+                class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                <span class="material-symbols-outlined">store</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold truncate text-white">
+                    <%= typeof user !=='undefined' && user ? user.restaurantName : 'Zaloguj się' %>
+                </p>
+                <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Właściciel</p>
+            </div>
+        </div>
+        <a href="/auth/logout"
+            class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:bg-red-500/10 hover:border-red-500/30 transition-all text-xs font-bold">
+            <span class="material-symbols-outlined text-sm">logout</span>
+            Wyloguj się
+        </a>
+    </div>
+</aside>

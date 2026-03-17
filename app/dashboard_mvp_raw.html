@@ -1,0 +1,184 @@
+<html class="dark"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f2a60d",
+                        "background-dark": "#1a1a1a",
+                        "sidebar-dark": "#111111",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body { font-family: 'Inter', sans-serif; }
+        .amber-glow { box-shadow: 0 0 15px rgba(242, 166, 13, 0.08); }
+        .card-hover:hover { border-color: #f2a60d; transform: translateY(-2px); transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-100 font-display">
+<div class="flex h-screen overflow-hidden">
+<aside class="w-64 bg-sidebar-dark border-r border-primary/10 flex flex-col shrink-0">
+<div class="p-8">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl font-bold">restaurant_menu</span>
+<h1 class="text-primary text-2xl font-black tracking-tighter">QResto</h1>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-2 mt-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-sidebar-dark font-bold shadow-lg shadow-primary/20" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm">Panel sterowania</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 transition-all" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-sm font-medium">Moje Menu</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 transition-all" href="#">
+<span class="material-symbols-outlined">qr_code_2</span>
+<span class="text-sm font-medium">Kody QR</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Ustawienia</span>
+</a>
+</nav>
+<div class="p-6 border-t border-slate-800/50">
+<div class="flex items-center gap-3 px-2 mb-4">
+<div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+<span class="material-symbols-outlined">store</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold truncate">Restauracja Smak</p>
+<p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Właściciel</p>
+</div>
+</div>
+<button class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:bg-red-500/10 hover:border-red-500/30 transition-all text-xs font-bold">
+<span class="material-symbols-outlined text-sm">logout</span>
+                    Wyloguj się
+                </button>
+</div>
+</aside>
+<main class="flex-1 overflow-y-auto">
+<div class="max-w-6xl mx-auto p-10">
+<header class="mb-12">
+<h1 class="text-4xl font-black tracking-tight text-white">Witaj, Restauracja Smak!</h1>
+<p class="text-slate-400 mt-2 text-lg">Zarządzaj swoim cyfrowym menu.</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+<div class="lg:col-span-2 space-y-10">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-sidebar-dark p-8 rounded-2xl border border-slate-800 amber-glow">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-primary bg-primary/10 p-3 rounded-xl">visibility</span>
+</div>
+<p class="text-slate-500 text-sm font-bold uppercase tracking-wider">Skanowania menu</p>
+<p class="text-4xl font-black mt-2 text-white">1,240</p>
+</div>
+<div class="bg-sidebar-dark p-8 rounded-2xl border border-slate-800 amber-glow">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-primary bg-primary/10 p-3 rounded-xl">restaurant</span>
+</div>
+<p class="text-slate-500 text-sm font-bold uppercase tracking-wider">Pozycje w menu</p>
+<p class="text-4xl font-black mt-2 text-white">42</p>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-6">
+<button class="group w-full flex items-center justify-between p-8 bg-sidebar-dark rounded-2xl border-2 border-primary text-left amber-glow transition-all hover:bg-primary/5">
+<div class="flex items-center gap-6">
+<div class="bg-primary text-sidebar-dark p-4 rounded-xl group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl font-bold">edit_note</span>
+</div>
+<div>
+<h3 class="text-2xl font-black text-white">Stwórz / Edytuj Menu</h3>
+<p class="text-slate-400 mt-1">Dodaj dania, zdjęcia i zaktualizuj ceny w czasie rzeczywistym.</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary">arrow_forward_ios</span>
+</button>
+<button class="group w-full flex items-center justify-between p-8 bg-sidebar-dark rounded-2xl border-2 border-slate-800 text-left transition-all hover:border-primary/50">
+<div class="flex items-center gap-6">
+<div class="bg-slate-800 text-primary p-4 rounded-xl group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl font-bold">qr_code_scanner</span>
+</div>
+<div>
+<h3 class="text-2xl font-black text-white">Wygeneruj kody QR</h3>
+<p class="text-slate-400 mt-1">Pobierz gotowe kody QR do wydruku na stoliki restauracji.</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-600 group-hover:text-primary transition-colors">arrow_forward_ios</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="bg-sidebar-dark p-8 rounded-3xl border border-slate-800 flex flex-col items-center">
+<h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-8">Podgląd na żywo</h3>
+<div class="relative w-[260px] h-[520px] bg-black rounded-[2.5rem] border-[6px] border-slate-800 shadow-2xl overflow-hidden ring-4 ring-slate-900/20">
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-800 rounded-b-xl z-20"></div>
+<div class="absolute inset-0 bg-[#0a0a0a] overflow-y-auto">
+<div class="p-5 pt-10">
+<div class="flex items-center justify-between mb-6">
+<span class="material-symbols-outlined text-primary text-xl">menu</span>
+<div class="size-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">RS</div>
+</div>
+<div class="mb-6">
+<h4 class="text-lg font-black text-primary">Restauracja Smak</h4>
+<p class="text-[8px] text-slate-500 tracking-wide mt-0.5">AUTENTYCZNA KUCHNIA WŁOSKA</p>
+</div>
+<div class="mb-6">
+<h5 class="text-[10px] font-bold text-white border-b border-primary/20 pb-1 mb-3 uppercase tracking-wider">Przystawki</h5>
+<div class="space-y-3">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDhZzTFsBbe4Xd0TC7NxdGmtxufqnczwM5dCTClAS2e71b3utKBAxK7fCKbyoRjRTwoP3kQNMU_kpfEi-6LuhppZde_KjwDfAGusEUWpGbMioc2pXL5aLydAmoC8Q1RiUKLOYJOWMmIkqF304EAB2V7oUnJjL1lFbJaJE6ERIuOd4rF-0EFZJ4bI9H7U8h-r6aOZO6IRAUX-rbTW33Sb-_Y9yQN6NhbUISd3ezSVYSvCpogJW7vAIqk6w-f39Ee1bMxdN5BuNFicQ')"></div>
+<div class="flex-1">
+<p class="text-[9px] font-bold">Bruschetta</p>
+<p class="text-[7px] text-slate-500">Pomidory, bazylia, oliwa...</p>
+</div>
+<p class="text-[9px] font-bold text-primary">18 PLN</p>
+</div>
+</div>
+</div>
+<div>
+<h5 class="text-[10px] font-bold text-white border-b border-primary/20 pb-1 mb-3 uppercase tracking-wider">Dania główne</h5>
+<div class="space-y-3">
+<div class="relative rounded-lg overflow-hidden h-20 bg-cover bg-center mb-3" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA9EUIA6hj_jFk3PD4Cq0I3q7-Q9MMws7_qQABgzdpsZqZ0evq9V_owGyGVYlGWWljAmB1aDE6Fb-Uz3kY_xBYJhPwcFewe6dlKkT-bmB91JI4f8BCTZyqmGIFOrNoDIynJhPo6CfwxiJECwawBC5kimCNEpxowjGsZmApkyqyO49t6WC1lrKgV8bI2mhWyOUNNxmWRZ3cJPP2L354foxw0HdHi43jSlzh9KVMY_qGRAKKb1EdVd99jvsCBGZPIoU-W2uaCI2Oleg')">
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent flex items-end p-2">
+<span class="text-[9px] font-bold">Pizza Margherita</span>
+</div>
+</div>
+<div class="flex items-center gap-3 p-2 bg-slate-900/50 rounded-lg border border-slate-800">
+<div class="size-10 rounded bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCtO-hJnbHQQSD2VtJR-Nhx72Ilz00tiqCSyEII6GmINTWQwpvbjhL7HHlWj8yCcu09MeNhUXvM0x28FTC1TSApxv35Dy2NKXomvuCRbozX7Wn97I_KZ1XCd9ut7NjEyNCkwy19AvBgT0_d_MRwp3qIg5rhbnpjUB2yF4iH2gYHj6WbrgVoKVEKcwXSBlaKhKUNX_t7PQ6F_saX0cSd4uSjgtKVoB0uNDjTQfQs7JtXV2FiFMzDZaFnu5_LWTKYh91hgY9IU0BS3Q')"></div>
+<div class="flex-1">
+<p class="text-[9px] font-bold">Pasta Carbonara</p>
+<p class="text-[7px] text-slate-500">Guanciale, pecorino...</p>
+</div>
+<p class="text-[9px] font-bold text-primary">42 PLN</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p class="mt-8 text-[11px] text-slate-500 text-center max-w-[180px] leading-relaxed italic">
+                                Tak Twoje menu prezentuje się klientom na urządzeniach mobilnych.
+                            </p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

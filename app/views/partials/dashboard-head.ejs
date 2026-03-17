@@ -1,0 +1,37 @@
+<meta charset="utf-8" />
+<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+<title>
+    <%= title %>
+</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+<script id="tailwind-config">
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    "primary": "#f2a60d",
+                    "background-light": "#f8f7f5",
+                    "background-dark": "#1a1a1a",
+                    "sidebar-dark": "#111111",
+                    "border-dark": "#333333",
+                    "border-subtle": "#333333",
+                    "accent-dark": "#2a2a2a"
+                },
+                fontFamily: {
+                    "display": ["Inter", "sans-serif"]
+                },
+                borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+            },
+        },
+    }
+</script>
+<style type="text/tailwindcss">
+    body { font-family: 'Inter', sans-serif; }
+    .amber-glow { box-shadow: 0 0 15px rgba(242, 166, 13, 0.08); }
+    .card-hover:hover { border-color: #f2a60d; transform: translateY(-2px); transition: all 0.3s ease; }
+</style>

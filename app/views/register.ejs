@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <%= typeof title !== 'undefined' && title ? title : 'QResto' %>
+    </title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="auth-page">
+    <div class="auth-container">
+        <!-- Left Side: Visual/Branding Section -->
+        <div class="auth-visual">
+            <div class="auth-visual-overlay"></div>
+            <img src="/img/hero-bg.png" alt="Premium restaurant interior" class="auth-visual-image">
+            <div class="auth-visual-content">
+                <a href="/" class="auth-logo">
+                    <div class="auth-logo-icon"><i class="fa-solid fa-utensils"></i></div>
+                    <h1>QResto</h1>
+                </a>
+                <div class="auth-benefits">
+                    <h2>Zmień sposób, w jaki Twoi goście zamawiają jedzenie.</h2>
+                    <ul>
+                        <li><i class="fa-solid fa-circle-check"></i> Błyskawiczne menu kodów QR</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Łatwa edycja potraw i cen</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Zarządzanie zamówieniami w czasie rzeczywistym</li>
+                    </ul>
+                </div>
+                <div class="auth-copyright">
+                    &copy; 2026 QResto. Wszelkie prawa zastrzeżone.
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Registration Form Section -->
+        <div class="auth-form-section">
+            <div class="auth-form-wrapper">
+                <a href="/" class="auth-logo-mobile">
+                    <div class="auth-logo-icon"><i class="fa-solid fa-utensils"></i></div>
+                    <h1>QResto</h1>
+                </a>
+
+                <div class="auth-header text-center lg-text-left">
+                    <h2>Dołącz do QResto</h2>
+                    <p>Załóż darmowe konto i stwórz cyfrowe menu dla swojej restauracji w kilka minut.</p>
+                </div>
+
+                <% if (typeof error !=='undefined' && error) { %>
+                    <div
+                        style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; font-weight: 500;">
+                        <i class="fa-solid fa-circle-exclamation" style="margin-right: 8px;"></i>
+                        <%= error %>
+                    </div>
+                    <% } %>
+
+                        <form class="auth-form" action="/auth/register" method="POST">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <div class="form-group">
+                                <label for="restaurant-name">Nazwa Restauracji</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-store input-icon"></i>
+                                    <input type="text" id="restaurant-name" name="restaurantName"
+                                        placeholder="np. Restauracja Smak" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">E-mail</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-envelope input-icon"></i>
+                                    <input type="email" id="email" name="email" placeholder="example@domain.com"
+                                        required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="password">Hasło</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-lock input-icon"></i>
+                                    <input type="password" id="password" name="password" placeholder="Min. 8 znaków"
+                                        required minlength="8">
+                                    <button type="button" class="password-toggle"><i
+                                            class="fa-solid fa-eye"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="form-row checkbox-row">
+                                <input type="checkbox" id="terms" name="terms" required>
+                                <label for="terms" class="text-sm">Akceptuję <a href="#">Regulamin</a> oraz <a
+                                        href="#">Politykę
+                                        Prywatności</a> serwisu QResto.</label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block shadow-btn">Załóż darmowe
+                                konto</button>
+                        </form>
+
+                        <div class="auth-footer border-top">
+                            <p>Masz już konto? <a href="/login">Zaloguj się</a></p>
+                        </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

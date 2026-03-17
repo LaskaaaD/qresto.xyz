@@ -1,0 +1,7 @@
+node_modules/
+.env
+.DS_Store
+ansible/inventory
+
+# Pliki certyfikat�w SSL Traefik
+letsencrypt/acme.json

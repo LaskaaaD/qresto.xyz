@@ -1,0 +1,231 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ---------------------------------------------------------
+  # ETAP 1: Continuous Integration (uruchamia się na push i PR)
+  # ---------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: ./app
+        run: npm ci || npm install
+
+      - name: Run tests
+        working-directory: ./app
+        run: npm test
+
+  # ---------------------------------------------------------
+  # ETAP 2: Build + publish artefaktu (tylko push)
+  # ---------------------------------------------------------
+  build-and-push:
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_repo: ${{ steps.image_name.outputs.image_repo }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute lowercase image repository
+        id: image_name
+        shell: bash
+        run: echo "image_repo=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image_name.outputs.image_repo }}
+          tags: type=ref,event=branch
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Telegram notify (build/publish success)
+        if: success()
+        continue-on-error: true
+        run: |
+          MSG="✅ Build + publish OK: ${{ github.repository }} | branch: ${{ github.ref_name }} | run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=$MSG" >/dev/null
+
+      - name: Telegram notify (build/publish failure)
+        if: failure()
+        continue-on-error: true
+        run: |
+          MSG="❌ Build/publish ERROR: ${{ github.repository }} | branch: ${{ github.ref_name }} | run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=$MSG" >/dev/null
+
+  # ---------------------------------------------------------
+  # ETAP 3: Deploy (tylko push na main)
+  # ---------------------------------------------------------
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure permissions on deployment directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          username: ${{ secrets.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            sudo chown -R $USER:$USER /opt/qresto || true
+            sudo chmod -R 775 /opt/qresto || true
+
+      - name: Upload repository to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          username: ${{ secrets.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "."
+          target: "/opt/qresto/"
+
+      - name: Normalize LF/BOM and script permissions on server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          username: ${{ secrets.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/qresto
+
+            find . -type f \( -name '*.sh' -o -name '.env' -o -name '.env.*' -o -name '*.yml' -o -name '*.yaml' \) -exec sed -i 's/\r$//' {} +
+            find . -type f \( -name '*.sh' -o -name '.env' -o -name '.env.*' -o -name '*.yml' -o -name '*.yaml' \) -exec sed -i '1s/^\xEF\xBB\xBF//' {} +
+
+            if [ -d scripts ]; then
+              find scripts -type f -name '*.sh' -exec chmod +x {} +
+            fi
+
+      - name: Deploy published artifact from GHCR
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          username: ${{ secrets.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/qresto
+
+            mkdir -p letsencrypt
+            touch letsencrypt/acme.json
+            chmod 600 letsencrypt/acme.json
+
+            IMAGE_REPO="${{ needs.build-and-push.outputs.image_repo }}"
+            APP_IMAGE="ghcr.io/${IMAGE_REPO}:main"
+
+            if grep -q '^APP_IMAGE=' .env; then
+              sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${APP_IMAGE}|" .env
+            else
+              echo "APP_IMAGE=${APP_IMAGE}" >> .env
+            fi
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            sudo docker compose --env-file .env pull app
+            sudo docker compose --env-file .env up -d --force-recreate
+
+            # Poczekaj az API Zabbixa zacznie odpowiadac
+            if [ -n "${ZABBIX_DOMAIN:-}" ]; then
+              echo "[INFO] Oczekiwanie na gotowosc API Zabbix (https://${ZABBIX_DOMAIN}/api_jsonrpc.php)..."
+              for i in $(seq 1 24); do
+                if curl -ksS --max-time 5 "https://${ZABBIX_DOMAIN}/api_jsonrpc.php" >/dev/null; then
+                  echo "[OK] API Zabbix odpowiada (proba $i)."
+                  break
+                fi
+
+                if [ "$i" -eq 24 ]; then
+                  echo "[WARN] API Zabbix nadal nie odpowiada po 2 minutach. Przechodze do bootstrapu z retry."
+                else
+                  sleep 5
+                fi
+              done
+            fi
+
+            # Proba natychmiastowego bootstrapu Zabbixa po deployu (z retry na czas inicjalizacji stacku)
+            sudo mkdir -p /var/log/qresto
+            sudo touch /var/log/qresto/zabbix-bootstrap.log
+            sudo chown "$USER:$USER" /var/log/qresto /var/log/qresto/zabbix-bootstrap.log
+            rm -f /opt/qresto/.zabbix_bootstrap_done
+
+            if [ -f /opt/qresto/.env ] && [ -f /opt/qresto/scripts/bootstrap-zabbix.sh ]; then
+              echo "[INFO] Uruchamiam pelny bootstrap Zabbix (1x)..." | tee -a /var/log/qresto/zabbix-bootstrap.log
+
+              if /bin/bash /opt/qresto/scripts/bootstrap-zabbix.sh >> /var/log/qresto/zabbix-bootstrap.log 2>&1; then
+                touch /opt/qresto/.zabbix_bootstrap_done
+                echo "[OK] Pelny bootstrap Zabbix zakonczony." | tee -a /var/log/qresto/zabbix-bootstrap.log
+              else
+                echo "[WARN] Pelny bootstrap Zabbix nieudany. Cron sprobuje ponownie pozniej." | tee -a /var/log/qresto/zabbix-bootstrap.log
+              fi
+            else
+              echo "[WARN] Pomijam bootstrap Zabbixa: brak /opt/qresto/.env lub scripts/bootstrap-zabbix.sh" | tee -a /var/log/qresto/zabbix-bootstrap.log
+            fi
+
+      - name: Telegram notify (deploy success)
+        if: success()
+        continue-on-error: true
+        run: |
+          MSG="🚀 [PRODUCTION] Deploy OK: ${{ github.repository }} | branch: ${{ github.ref_name }} | run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=$MSG" >/dev/null
+
+      - name: Telegram notify (deploy failure)
+        if: failure()
+        continue-on-error: true
+        run: |
+          MSG="❌ [PRODUCTION] Deploy FAILED: ${{ github.repository }} | branch: ${{ github.ref_name }} | run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=$MSG" >/dev/null
