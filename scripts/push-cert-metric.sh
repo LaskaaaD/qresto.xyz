@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Wysyła metrykę liczby dni do wygaśnięcia certyfikatu do Zabbix Trapper.
+# Sends the certificate days-left metric to Zabbix Trapper.
 # Wymaga zabbix_sender i openssl.
 
 load_env_file() {
@@ -20,7 +20,7 @@ load_env_file() {
   done < <(sed $'1s/^\xEF\xBB\xBF//' "$env_file")
 }
 
-# Dla uruchomień z crona pobierz wartości z /opt/qresto/.env (jeśli istnieje)
+# When running from cron, load values from /opt/qresto/.env when it exists.
 load_env_file "/opt/qresto/.env"
 
 APP_DOMAIN="${APP_DOMAIN:-}"
@@ -32,17 +32,17 @@ TELEGRAM_CERT_ALERT_DAYS="${TELEGRAM_CERT_ALERT_DAYS:-20}"
 CERT_ALERT_STATE_FILE="${CERT_ALERT_STATE_FILE:-/var/tmp/qresto-cert-alert.state}"
 
 if [ -z "$APP_DOMAIN" ]; then
-  echo "[BŁĄD] Ustaw APP_DOMAIN"
+  echo "[ERROR] Set APP_DOMAIN"
   exit 1
 fi
 
 if ! command -v openssl >/dev/null 2>&1; then
-  echo "[BŁĄD] Brak openssl"
+  echo "[ERROR] openssl is required"
   exit 1
 fi
 
 if ! command -v zabbix_sender >/dev/null 2>&1; then
-  echo "[BŁĄD] Brak zabbix_sender (zainstaluj zabbix-sender)"
+  echo "[ERROR] zabbix_sender is required (install zabbix-sender)"
   exit 1
 fi
 
@@ -52,7 +52,7 @@ now_epoch="$(date +%s)"
 days_left="$(( (end_epoch - now_epoch) / 86400 ))"
 
 zabbix_sender -z "$ZABBIX_SERVER" -s "$ZABBIX_HOSTNAME" -k qresto.acme.days.left -o "$days_left"
-echo "[OK] Wysłano qresto.acme.days.left=$days_left"
+echo "[OK] Sent qresto.acme.days.left=$days_left"
 
 send_telegram_alert() {
   local message="$1"
@@ -73,9 +73,9 @@ if [ "$days_left" -lt "$TELEGRAM_CERT_ALERT_DAYS" ] && [ -n "$TELEGRAM_BOT_TOKEN
     msg="⚠️ QResto: cert dla ${APP_DOMAIN} wygasa za ${days_left} dni (prog: ${TELEGRAM_CERT_ALERT_DAYS})."
     if send_telegram_alert "$msg"; then
       echo "$stamp" > "$CERT_ALERT_STATE_FILE"
-      echo "[OK] Wysłano alert Telegram o certyfikacie"
+      echo "[OK] Sent Telegram certificate alert"
     else
-      echo "[WARN] Nie udało się wysłać alertu Telegram"
+      echo "[WARN] Failed to send Telegram alert"
     fi
   fi
 fi

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Przełącznik skali aplikacji pod większy ruch.
-# Użycie:
+# Switch application scale for a traffic demo.
+# Usage:
 #   bash scripts/traffic-mode.sh normal
 #   bash scripts/traffic-mode.sh high
 #   bash scripts/traffic-mode.sh status
@@ -17,7 +17,7 @@ fi
 cd "$APP_DIR"
 
 if [ ! -f ".env" ]; then
-  echo "[BŁĄD] Brak pliku .env w $APP_DIR"
+  echo "[ERROR] Missing .env in $APP_DIR"
   exit 1
 fi
 
@@ -45,7 +45,7 @@ set_scale() {
   ensure_acme
 
   docker compose --env-file .env up -d --scale app="$replicas"
-  echo "[OK] Ustawiono skalę app=${replicas}"
+  echo "[OK] Set app replicas to ${replicas}"
 }
 
 case "$MODE" in
@@ -56,12 +56,12 @@ case "$MODE" in
     set_scale 3
     ;;
   status)
-    echo "=== Status skali ==="
-    grep '^APP_REPLICAS=' .env || echo 'APP_REPLICAS=1 (domyślnie)'
+    echo "=== Scale status ==="
+    grep '^APP_REPLICAS=' .env || echo 'APP_REPLICAS=1 (default)'
     docker ps --format '{{.Names}}' | grep 'qresto.*app' || true
     ;;
   *)
-    echo "Użycie: bash scripts/traffic-mode.sh {normal|high|status}"
+    echo "Usage: bash scripts/traffic-mode.sh {normal|high|status}"
     exit 1
     ;;
 esac

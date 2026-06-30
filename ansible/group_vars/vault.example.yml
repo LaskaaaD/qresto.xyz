@@ -1,0 +1,10 @@
+---
+# Copy to ansible/group_vars/vault.yml, fill real values, then encrypt:
+# ansible-vault encrypt ansible/group_vars/vault.yml
+vault_cf_dns_api_token: replace_with_cloudflare_dns_api_token
+vault_mongo_password: replace_with_strong_mongodb_password
+vault_session_secret: replace_with_random_min_32_chars
+vault_zabbix_db_password: replace_with_strong_zabbix_db_password
+vault_zabbix_api_password: replace_with_strong_zabbix_api_password
+vault_telegram_bot_token: ""
+vault_telegram_chat_id: ""

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Bootstrap demo monitoringu Zabbix przez API.
-# Tworzy hosta, podpina templatey, web scenarios, triggery i dashboardy.
+# Creates host configuration, links templates, web scenarios, triggers, and dashboards.
 #
 # Wymaga:
 # - .env z ROOT_DOMAIN/APP_DOMAIN/ZABBIX_DOMAIN/TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID
@@ -18,23 +18,23 @@ fi
 cd "$APP_DIR"
 
 if [ ! -f .env ]; then
-  echo "[BŁĄD] Brak .env w $APP_DIR"
+  echo "[ERROR] Missing .env in $APP_DIR"
   exit 1
 fi
 
-# Odporny loader .env: usuwa BOM/CRLF i ignoruje linie, które nie są KEY=VALUE.
+# Robust .env loader: strips BOM/CRLF and ignores lines that are not KEY=VALUE.
 load_env_file() {
   local env_file="$1"
 
   while IFS= read -r line || [ -n "$line" ]; do
-    # Usuń końcówkę CR (Windows)
+    # Strip CR suffix (Windows)
     line="${line%$'\r'}"
 
-    # Pomiń puste linie i komentarze
+    # Skip empty lines and comments
     [[ -z "$line" ]] && continue
     [[ "$line" =~ ^[[:space:]]*# ]] && continue
 
-    # Akceptuj tylko poprawne wpisy środowiskowe
+    # Accept only valid environment entries
     if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
       export "$line"
     fi
@@ -44,7 +44,7 @@ load_env_file() {
 load_env_file ".env"
 
 if ! command -v jq >/dev/null 2>&1; then
-  echo "[BŁĄD] Brak jq. Zainstaluj: sudo apt install -y jq"
+  echo "[ERROR] jq is required. Install it with: sudo apt install -y jq"
   exit 1
 fi
 
@@ -55,7 +55,7 @@ READY_URL="https://${APP_DOMAIN}/ready"
 HOST_NAME="${ZABBIX_HOSTNAME:-qresto-vps-agent}"
 
 if [ -z "${ZABBIX_API_USER:-}" ] || [ -z "${ZABBIX_API_PASSWORD:-}" ]; then
-  echo "[BŁĄD] Ustaw ZABBIX_API_USER i ZABBIX_API_PASSWORD w .env"
+  echo "[ERROR] Set ZABBIX_API_USER and ZABBIX_API_PASSWORD in .env"
   exit 1
 fi
 
@@ -79,7 +79,7 @@ for i in $(seq 1 20); do
   fi
 
   if [ "$i" -eq 20 ]; then
-    echo "[BŁĄD] Nie udało się zalogować do Zabbix API po 20 próbach: $ZABBIX_API_URL"
+    echo "[ERROR] Could not log in to Zabbix API after 20 attempts: $ZABBIX_API_URL"
     exit 1
   fi
 
@@ -103,13 +103,13 @@ api_call() {
     }")"
 
   if ! echo "$response" | jq -e . >/dev/null 2>&1; then
-    echo "[BŁĄD] Niepoprawna odpowiedź JSON z API Zabbix dla metody '$method'." >&2
-    echo "[BŁĄD] Surowa odpowiedź: $response" >&2
+    echo "[ERROR] Invalid JSON response from Zabbix API for method '$method'." >&2
+    echo "[ERROR] Raw response: $response" >&2
     return 1
   fi
 
   if echo "$response" | jq -e '.error' >/dev/null 2>&1; then
-    echo "[BŁĄD] Zabbix API zwrócił błąd dla metody '$method':" >&2
+    echo "[ERROR] Zabbix API returned an error for method '$method':" >&2
     echo "$response" | jq -c '.error' >&2
     return 1
   fi
@@ -119,33 +119,33 @@ api_call() {
 
 # ── Templates ────────────────────────────────────────
 
-echo "--- Szukanie templateów ---"
+echo "--- Looking for templates ---"
 
 LINUX_TEMPLATE_ID="$(api_call "template.get" '{"filter":{"host":["Linux by Zabbix agent active"]}}' | jq -r '.result[0].templateid // empty')"
 DOCKER_TEMPLATE_ID="$(api_call "template.get" '{"filter":{"host":["Docker by Zabbix agent 2"]}}' | jq -r '.result[0].templateid // empty')"
 
 if [ -z "$LINUX_TEMPLATE_ID" ]; then
-  echo "[BŁĄD] Nie znaleziono template: Linux by Zabbix agent active"
+  echo "[ERROR] Template not found: Linux by Zabbix agent active"
   exit 1
 fi
 
 if [ -z "$DOCKER_TEMPLATE_ID" ]; then
-  echo "[WARN] Nie znaleziono template: Docker by Zabbix agent 2 — monitoring kontenerów niedostępny"
+  echo "[WARN] Template not found: Docker by Zabbix agent 2; container monitoring is unavailable"
 fi
 
 # ── Host ─────────────────────────────────────────────
 
-echo "--- Konfiguracja hosta ---"
+echo "--- Configuring host ---"
 
 HOST_ID="$(api_call "host.get" "{\"filter\":{\"host\":[\"$HOST_NAME\"]}}" | jq -r '.result[0].hostid // empty')"
 
-# Budujemy listę templateów do podpięcia
+# Build the list of templates to link
 templates_json="[{\"templateid\": \"$LINUX_TEMPLATE_ID\"}"
 [ -n "$DOCKER_TEMPLATE_ID" ] && templates_json+=",{\"templateid\": \"$DOCKER_TEMPLATE_ID\"}"
 templates_json+="]"
 
 if [ -z "$HOST_ID" ]; then
-  echo "[INFO] Tworzenie hosta: $HOST_NAME"
+  echo "[INFO] Creating host: $HOST_NAME"
   HOST_ID="$(api_call "host.create" "{
     \"host\": \"$HOST_NAME\",
     \"interfaces\": [{
@@ -160,8 +160,8 @@ if [ -z "$HOST_ID" ]; then
     \"templates\": $templates_json
   }" | jq -r '.result.hostids[0] // empty')"
 else
-  echo "[INFO] Host '$HOST_NAME' istnieje (ID: $HOST_ID). Aktualizuję templatey..."
-  # Podpięcie templateów (idempotentne — istniejące nie zostaną zduplikowane)
+  echo "[INFO] Host '$HOST_NAME' exists (ID: $HOST_ID). Updating templates..."
+  # Link templates idempotently; existing links will not be duplicated.
   api_call "host.update" "{
     \"hostid\": \"$HOST_ID\",
     \"templates\": $templates_json
@@ -169,7 +169,7 @@ else
 fi
 
 if [ -z "$HOST_ID" ]; then
-  echo "[BŁĄD] Nie udało się utworzyć/odczytać hosta $HOST_NAME"
+  echo "[ERROR] Could not create/read host $HOST_NAME"
   exit 1
 fi
 
@@ -177,7 +177,7 @@ echo "[OK] Host: $HOST_NAME (ID: $HOST_ID)"
 
 # ── Web Scenarios ────────────────────────────────────
 
-echo "--- Konfiguracja web scenarios ---"
+echo "--- Configuring web scenarios ---"
 
 create_web_scenario() {
   local scenario_name="$1"
@@ -201,7 +201,7 @@ create_web_scenario() {
     }" > /dev/null
     echo "[OK] Web scenario: $scenario_name → $url"
   else
-    echo "[INFO] Web scenario '$scenario_name' już istnieje — pomijam."
+    echo "[INFO] Web scenario '$scenario_name' already exists; skipping."
   fi
 }
 
@@ -211,7 +211,7 @@ create_web_scenario "QResto Ready"  "ready"  "$READY_URL"
 
 # ── Triggers ─────────────────────────────────────────
 
-echo "--- Konfiguracja triggerów ---"
+echo "--- Configuring triggers ---"
 
 create_trigger() {
   local description="$1"
@@ -229,7 +229,7 @@ create_trigger() {
     }" > /dev/null
     echo "[OK] Trigger: $description"
   else
-    echo "[INFO] Trigger '$description' już istnieje — pomijam."
+    echo "[INFO] Trigger '$description' already exists; skipping."
   fi
 }
 
@@ -239,7 +239,7 @@ create_trigger "QResto readiness check failed"             "last(/$HOST_NAME/web
 
 # ── Cert item + trigger ──────────────────────────────
 
-echo "--- Konfiguracja metryki certyfikatu ---"
+echo "--- Configuring certificate metric ---"
 
 cert_item_name="ACME cert days left"
 cert_item_key="qresto.acme.days.left"
@@ -255,7 +255,7 @@ if [ -z "$cert_item_id" ]; then
   }" | jq -r '.result.itemids[0] // empty')"
   echo "[OK] Item: $cert_item_name (key: $cert_item_key)"
 else
-  echo "[INFO] Item '$cert_item_name' (key: $cert_item_key) już istnieje — pomijam."
+  echo "[INFO] Item '$cert_item_name' (key: $cert_item_key) already exists; skipping."
 fi
 
 create_trigger "ACME certificate expires in <20 days" "last(/$HOST_NAME/qresto.acme.days.left)<20" 4
@@ -263,7 +263,7 @@ create_trigger "ACME certificate expires in <20 days" "last(/$HOST_NAME/qresto.a
 # ── Telegram Media Type + Alert Action ──────────────
 
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-  echo "--- Konfiguracja Telegram Media Type ---"
+  echo "--- Configuring Telegram Media Type ---"
 
   telegram_mediatype_name="QResto Telegram"
   telegram_mediatypeid="$(api_call "mediatype.get" "{\"filter\":{\"name\":[\"$telegram_mediatype_name\"]}}" | jq -r '.result[0].mediatypeid // empty')"
@@ -352,7 +352,7 @@ JS
       echo "[WARN] Nie udalo sie utworzyc Telegram media type"
     fi
   else
-    echo "[INFO] Telegram media type juz istnieje (ID: $telegram_mediatypeid) - aktualizuje."
+    echo "[INFO] Telegram media type already exists (ID: $telegram_mediatypeid); updating."
     api_call "mediatype.update" "{
       \"mediatypeid\": \"$telegram_mediatypeid\",
       \"status\": 0,
@@ -383,11 +383,11 @@ JS
       }" > /dev/null
       echo "[OK] Telegram przypisany do uzytkownika Admin"
     else
-      echo "[INFO] Telegram juz przypisany do Admin - pomijam."
+      echo "[INFO] Telegram is already assigned to Admin; skipping."
     fi
   fi
 
-  echo "--- Konfiguracja Trigger Action ---"
+  echo "--- Configuring Trigger Action ---"
   action_name="QResto - Alert Telegram"
   existing_action="$(api_call "action.get" '{"search":{"name":"Alert Telegram"}}' | jq -r --arg preferred "$action_name" '.result | if length == 0 then empty else (map(select(.name == $preferred))[0] // .[0]).actionid end')"
   custom_action_id="$existing_action"
@@ -470,27 +470,27 @@ JS
     api_call "action.update" "{\"actionid\": \"$default_action_id\", \"status\": 1}" > /dev/null
     echo "[INFO] Domyslna akcja 'Report problems...' wylaczona (zastapiona przez QResto)"
   elif [ -n "$default_action_id" ]; then
-    echo "[WARN] Custom action nie istnieje, domyslna akcja pozostaje aktywna."
+    echo "[WARN] Custom action does not exist; the default action remains active."
   fi
 else
-  echo "[WARN] TELEGRAM_BOT_TOKEN lub TELEGRAM_CHAT_ID nie ustawione - pomijam konfiguracje alertow"
+  echo "[WARN] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not set; skipping alert configuration"
 fi
 
 # ── Dashboards ───────────────────────────────────────
 
-echo "--- Tworzenie dashboardów ---"
+echo "--- Creating dashboards ---"
 
 DASHBOARDS_SCRIPT="$SCRIPT_DIR/bootstrap-dashboards.sh"
 
 if [ -f "$DASHBOARDS_SCRIPT" ]; then
   export ZABBIX_API_URL AUTH_TOKEN HOST_ID HOST_NAME
   if ! bash "$DASHBOARDS_SCRIPT"; then
-    echo "[BŁĄD] Nie udało się utworzyć dashboardów. Przerwano bootstrap Zabbix."
-    echo "[INFO] Kolejna próba może zostać wykonana automatycznie przez cron."
+    echo "[ERROR] Could not create dashboards. Zabbix bootstrap stopped."
+    echo "[INFO] The next attempt can be run automatically by cron."
     exit 1
   fi
 else
-  echo "[BŁĄD] Brak skryptu $DASHBOARDS_SCRIPT — nie można dokończyć bootstrapu Zabbix."
+  echo "[ERROR] Missing script $DASHBOARDS_SCRIPT; cannot finish Zabbix bootstrap."
   exit 1
 fi
 
@@ -498,7 +498,7 @@ fi
 
 echo ""
 echo "======================================="
-echo "[OK] Zabbix bootstrap zakończony:"
+echo "[OK] Zabbix bootstrap completed:"
 echo "  Host:       $HOST_NAME"
 echo "  Templatey:  Linux by Zabbix agent active"
 [ -n "$DOCKER_TEMPLATE_ID" ] && echo "              Docker by Zabbix agent 2"

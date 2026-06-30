@@ -1,0 +1,37 @@
+---
+deploy_user: qresto
+deploy_ssh_pub_key: "~/.ssh/id_ed25519.pub"
+ssh_port: 22
+initial_ssh_port: "{{ ssh_port }}"
+
+app_dir: /opt/qresto
+backup_dir: /var/backups/qresto
+root_domain: example.com
+root_domain_regex: "example\\.com"
+app_domain: example.com
+app_www_domain: www.example.com
+zabbix_domain: zabbix.example.com
+ssl_email: admin@example.com
+timezone: Europe/Warsaw
+
+apt_retries: 10
+apt_retry_delay: 30
+apt_lock_timeout: 600
+
+base_packages:
+  - cron
+  - unattended-upgrades
+  - fail2ban
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - jq
+  - zabbix-sender
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin

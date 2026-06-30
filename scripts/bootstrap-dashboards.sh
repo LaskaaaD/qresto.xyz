@@ -27,7 +27,7 @@ load_env_file() {
 }
 
 if ! command -v jq >/dev/null 2>&1; then
-  echo "[BD] Brak jq. Zainstaluj: sudo apt install -y jq"
+  echo "[ERROR] jq is required. Install it with: sudo apt install -y jq"
   exit 1
 fi
 
@@ -44,7 +44,7 @@ if [ -z "${ZABBIX_API_URL:-}" ] || [ -z "${AUTH_TOKEN:-}" ] || [ -z "${HOST_ID:-
   fi
 
   if [ -z "${ZABBIX_API_URL:-}" ] || [ -z "${ZABBIX_API_USER:-}" ] || [ -z "${ZABBIX_API_PASSWORD:-}" ] || [ -z "${HOST_NAME:-}" ]; then
-    echo "[BD] Brak wymaganych danych. Ustaw: ZABBIX_API_URL, ZABBIX_API_USER, ZABBIX_API_PASSWORD, HOST_NAME (lub ZABBIX_HOSTNAME)."
+    echo "[ERROR] Missing required data. Set: ZABBIX_API_URL, ZABBIX_API_USER, ZABBIX_API_PASSWORD, HOST_NAME (or ZABBIX_HOSTNAME)."
     exit 1
   fi
 
@@ -255,9 +255,9 @@ create_docker_dashboard() {
         row=$((row + 5))
       fi
     done < <(echo "$graphs_json" | jq -c '.[]')
-    echo "[INFO] Dodano $graph_count grafów Docker."
+    echo "[INFO] Added $graph_count Docker graphs."
   else
-    echo "[WARN] Brak grafów Docker na tym etapie — dashboard pozostaje w wersji podstawowej."
+    echo "[WARN] No Docker graphs are available at this stage; the dashboard remains in the basic version."
   fi
 
   widgets+="]"
@@ -333,7 +333,7 @@ create_http_dashboard() {
   create_dashboard "$dash_name" "$widgets"
 }
 
-echo "=== Bootstrap dashboardów Zabbix ==="
+echo "=== Zabbix dashboards bootstrap ==="
 create_docker_dashboard || true
 create_server_dashboard || true
 create_http_dashboard || true

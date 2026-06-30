@@ -4,9 +4,9 @@ const path = require('path');
 const session = require('express-session');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const csrf = require('csurf');
 const mongoose = require('mongoose');
 const os = require('os');
+const crypto = require('crypto');
 const connectDB = require('./src/config/db');
 const MongoStore = require('connect-mongo').default;
 const { setLocals } = require('./src/middleware/auth');
@@ -19,6 +19,7 @@ const qrRouter = require('./src/routes/qr');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
+const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 if (!process.env.MONGODB_URI) {
     throw new Error('MONGODB_URI variable is not defined in .env');
@@ -71,10 +72,21 @@ app.use(session({
 
 app.use('/auth', authLimiter);
 
-const csrfProtection = csrf();
-app.use(csrfProtection);
 app.use((req, res, next) => {
-    res.locals.csrfToken = req.csrfToken();
+    if (!req.session.csrfToken) {
+        req.session.csrfToken = crypto.randomBytes(32).toString('hex');
+    }
+
+    if (unsafeMethods.has(req.method)) {
+        const submittedToken = req.body._csrf || req.query._csrf || req.get('x-csrf-token');
+        if (!submittedToken || submittedToken !== req.session.csrfToken) {
+            const error = new Error('Invalid CSRF token');
+            error.code = 'EBADCSRFTOKEN';
+            return next(error);
+        }
+    }
+
+    res.locals.csrfToken = req.session.csrfToken;
     next();
 });
 

@@ -1,0 +1,321 @@
+---
+- name: Provision QResto production VPS
+  hosts: vps
+  become: true
+
+  pre_tasks:
+    - name: Validate supported OS family
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_major_version | int >= 22
+        fail_msg: "This playbook supports Ubuntu 22.04 or newer."
+
+  tasks:
+    - name: Configure base operating system
+      tags: [base]
+      block:
+        - name: Set timezone
+          community.general.timezone:
+            name: "{{ timezone }}"
+
+        - name: Upgrade system packages
+          ansible.builtin.apt:
+            update_cache: true
+            upgrade: dist
+            lock_timeout: "{{ apt_lock_timeout }}"
+          register: apt_upgrade_result
+          retries: "{{ apt_retries }}"
+          delay: "{{ apt_retry_delay }}"
+          until: apt_upgrade_result is succeeded
+
+        - name: Install base packages
+          ansible.builtin.apt:
+            name: "{{ base_packages }}"
+            state: present
+            lock_timeout: "{{ apt_lock_timeout }}"
+          register: apt_base_packages_result
+          retries: "{{ apt_retries }}"
+          delay: "{{ apt_retry_delay }}"
+          until: apt_base_packages_result is succeeded
+
+        - name: Ensure cron is enabled
+          ansible.builtin.service:
+            name: cron
+            state: started
+            enabled: true
+
+        - name: Limit journald disk usage
+          ansible.builtin.lineinfile:
+            path: /etc/systemd/journald.conf
+            regexp: '^#?SystemMaxUse='
+            line: SystemMaxUse=100M
+          notify: Restart journald
+
+    - name: Configure swap
+      tags: [base]
+      block:
+        - name: Check swap file
+          ansible.builtin.stat:
+            path: /swapfile
+          register: swapfile_stat
+
+        - name: Create swap file
+          ansible.builtin.command: fallocate -l 2G /swapfile
+          when: not swapfile_stat.stat.exists
+
+        - name: Set swap permissions
+          ansible.builtin.file:
+            path: /swapfile
+            mode: "0600"
+          when: not swapfile_stat.stat.exists
+
+        - name: Initialize swap
+          ansible.builtin.command: mkswap /swapfile
+          when: not swapfile_stat.stat.exists
+
+        - name: Enable swap
+          ansible.builtin.command: swapon /swapfile
+          when: not swapfile_stat.stat.exists
+
+        - name: Persist swap
+          ansible.posix.mount:
+            name: none
+            src: /swapfile
+            fstype: swap
+            opts: sw
+            passno: "0"
+            dump: "0"
+            state: present
+
+    - name: Configure host firewall and SSH hardening
+      tags: [security]
+      block:
+        - name: Allow required TCP ports
+          community.general.ufw:
+            rule: allow
+            port: "{{ item }}"
+            proto: tcp
+          loop:
+            - "{{ initial_ssh_port }}"
+            - "{{ ssh_port }}"
+            - "80"
+            - "443"
+
+        - name: Enable UFW
+          community.general.ufw:
+            state: enabled
+
+        - name: Enable fail2ban
+          ansible.builtin.service:
+            name: fail2ban
+            state: started
+            enabled: true
+
+        - name: Ensure sshd loads drop-in configs
+          ansible.builtin.lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?Include\s+/etc/ssh/sshd_config\.d/\*\.conf'
+            line: Include /etc/ssh/sshd_config.d/*.conf
+            insertbefore: BOF
+          notify: Restart SSH
+
+        - name: Set SSH port
+          ansible.builtin.lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?Port\s+'
+            line: "Port {{ ssh_port }}"
+            insertbefore: '^Include\s+/etc/ssh/sshd_config\.d/\*\.conf'
+          notify: Restart SSH
+
+        - name: Apply SSH hardening drop-in
+          ansible.builtin.copy:
+            dest: /etc/ssh/sshd_config.d/00-qresto-hardening.conf
+            owner: root
+            group: root
+            mode: "0644"
+            content: |
+              PermitRootLogin no
+              PasswordAuthentication no
+          notify: Restart SSH
+
+        - name: Collect service facts
+          ansible.builtin.service_facts:
+
+        - name: Disable ssh.socket when using a non-default SSH port
+          ansible.builtin.systemd:
+            name: ssh.socket
+            enabled: false
+            state: stopped
+            masked: true
+          when:
+            - "'ssh.socket' in ansible_facts.services"
+            - (ssh_port | int) != 22
+
+        - name: Ensure SSH service is enabled
+          ansible.builtin.systemd:
+            name: ssh
+            enabled: true
+            state: started
+
+        - name: Validate SSH configuration
+          ansible.builtin.command: /usr/sbin/sshd -t
+          changed_when: false
+
+    - name: Install Docker Engine
+      tags: [docker]
+      block:
+        - name: Create Docker APT keyring directory
+          ansible.builtin.file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: "0755"
+
+        - name: Download Docker GPG key
+          ansible.builtin.get_url:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            dest: /etc/apt/keyrings/docker.asc
+            mode: "0644"
+            force: true
+
+        - name: Add Docker APT repository
+          ansible.builtin.apt_repository:
+            repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+
+        - name: Install Docker packages
+          ansible.builtin.apt:
+            name: "{{ docker_packages }}"
+            state: present
+            update_cache: true
+            lock_timeout: "{{ apt_lock_timeout }}"
+          register: apt_docker_packages_result
+          retries: "{{ apt_retries }}"
+          delay: "{{ apt_retry_delay }}"
+          until: apt_docker_packages_result is succeeded
+
+        - name: Enable Docker service
+          ansible.builtin.service:
+            name: docker
+            state: started
+            enabled: true
+
+    - name: Configure deployment account and directories
+      tags: [deploy]
+      block:
+        - name: Create deploy user
+          ansible.builtin.user:
+            name: "{{ deploy_user }}"
+            shell: /bin/bash
+            create_home: true
+            groups: docker
+            append: true
+            state: present
+
+        - name: Install deploy SSH public key
+          ansible.posix.authorized_key:
+            user: "{{ deploy_user }}"
+            state: present
+            key: "{{ lookup('file', deploy_ssh_pub_key) }}"
+
+        - name: Create application directories
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: directory
+            owner: "{{ item.owner | default(deploy_user) }}"
+            group: "{{ item.group | default(deploy_user) }}"
+            mode: "{{ item.mode }}"
+          loop:
+            - { path: "{{ app_dir }}", mode: "0755" }
+            - { path: "{{ app_dir }}/letsencrypt", mode: "0755" }
+            - { path: "{{ backup_dir }}", owner: root, group: docker, mode: "0770" }
+            - { path: /var/log/qresto, owner: root, group: docker, mode: "0770" }
+
+        - name: Initialize Traefik ACME storage
+          ansible.builtin.copy:
+            content: ""
+            dest: "{{ app_dir }}/letsencrypt/acme.json"
+            force: false
+            owner: "{{ deploy_user }}"
+            group: "{{ deploy_user }}"
+            mode: "0600"
+
+        - name: Install limited sudo policy for operational scripts
+          ansible.builtin.copy:
+            dest: "/etc/sudoers.d/{{ deploy_user }}-qresto"
+            owner: root
+            group: root
+            mode: "0440"
+            validate: "visudo -cf %s"
+            content: |
+              {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl restart ssh, /usr/bin/systemctl restart systemd-journald
+              {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/install -d -m 0770 -o root -g docker /var/backups/qresto, /usr/bin/install -d -m 0770 -o root -g docker /var/log/qresto
+
+        - name: Copy environment bootstrap template
+          ansible.builtin.copy:
+            src: ../../.env.example
+            dest: "{{ app_dir }}/.env.bootstrap"
+            owner: "{{ deploy_user }}"
+            group: "{{ deploy_user }}"
+            mode: "0640"
+
+        - name: Fill non-secret environment values
+          ansible.builtin.lineinfile:
+            path: "{{ app_dir }}/.env.bootstrap"
+            regexp: "^{{ item.key }}="
+            line: "{{ item.key }}={{ item.value }}"
+          loop:
+            - { key: ROOT_DOMAIN, value: "{{ root_domain }}" }
+            - { key: ROOT_DOMAIN_REGEX, value: "{{ root_domain_regex }}" }
+            - { key: APP_DOMAIN, value: "{{ app_domain }}" }
+            - { key: APP_WWW_DOMAIN, value: "{{ app_www_domain }}" }
+            - { key: ZABBIX_DOMAIN, value: "{{ zabbix_domain }}" }
+            - { key: SSL_EMAIL, value: "{{ ssl_email }}" }
+            - { key: APP_REPLICAS, value: "1" }
+
+    - name: Install operational cron jobs
+      tags: [ops]
+      block:
+        - name: Install local HTTPS healthcheck
+          ansible.builtin.copy:
+            dest: /usr/local/bin/qresto-healthcheck.sh
+            owner: root
+            group: root
+            mode: "0755"
+            content: |
+              #!/usr/bin/env bash
+              set -euo pipefail
+              curl -fsS --max-time 8 "https://{{ app_domain }}/health" >/dev/null
+
+        - name: Schedule application healthcheck
+          ansible.builtin.cron:
+            name: "QResto application healthcheck"
+            minute: "*/5"
+            user: root
+            job: "/usr/local/bin/qresto-healthcheck.sh >> /var/log/qresto/healthcheck.log 2>&1"
+
+        - name: Schedule daily backup
+          ansible.builtin.cron:
+            name: "QResto daily backup"
+            minute: "30"
+            hour: "3"
+            user: root
+            job: "[ -f {{ app_dir }}/scripts/backup.sh ] && /bin/bash {{ app_dir }}/scripts/backup.sh >> /var/log/qresto/backup.log 2>&1"
+
+        - name: Schedule certificate metric push
+          ansible.builtin.cron:
+            name: "QResto certificate metric"
+            minute: "*/30"
+            user: root
+            job: "[ -f {{ app_dir }}/scripts/push-cert-metric.sh ] && /bin/bash {{ app_dir }}/scripts/push-cert-metric.sh >> /var/log/qresto/cert-metric.log 2>&1"
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
+    - name: Restart journald
+      ansible.builtin.service:
+        name: systemd-journald
+        state: restarted

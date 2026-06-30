@@ -1,57 +1,45 @@
-# QResto - Checklista Obrony DevOps
+# DevOps Defense Checklist
 
-## 1. Wymagania Obowiazkowe (Status)
+Use this file to explain the project in an interview or course defense.
 
-- [x] Publiczne repozytorium z aplikacja
-- [x] IaC: provisioning serwera przez Ansible
-- [x] CI/CD: build + publikacja artefaktu po pushu
-- [x] CD: automatyczny deploy po pushu na `main`
-- [x] Monitoring infrastruktury i aplikacji
-- [x] Powiadomienia o statusie pipeline i deployu
-- [x] Minimalna dokumentacja uruchomienia i wdrozenia
+## What This Project Demonstrates
 
-## 2. Gdzie to jest w repo
+- A working Node.js application packaged as a production Docker image.
+- A Compose stack with reverse proxy, TLS, application, database, and monitoring.
+- VPS provisioning with Ansible.
+- CI validation and dependency auditing.
+- GHCR image publishing and manual production deployment.
+- Monitoring and maintenance tasks through Zabbix and cron scripts.
 
-- IaC:
-  - `ansible/setup.yml`
-  - `scripts/provision.sh`
-- CI/CD:
-  - `.github/workflows/ci-cd.yml`
-- Kontenery i siec:
-  - `docker-compose.yml`
-  - `Dockerfile`
-- Monitoring:
-  - `scripts/bootstrap-zabbix.sh`
-  - `scripts/push-cert-metric.sh`
-  - `scripts/check-acme-renew.sh`
-- Backup:
-  - `scripts/backup.sh`
+## Security Decisions
 
-## 3. Co pokazac na demo (10-12 min)
+| Area | Decision |
+| --- | --- |
+| Application image | Runs as the `node` user, not root |
+| Image supply chain | Dockerfile base image and Compose service images are pinned by digest |
+| Filesystem | Application container uses `read_only: true` and a named upload volume |
+| Linux capabilities | Application and proxy containers drop all capabilities |
+| Docker socket | Traefik uses a read-only socket proxy instead of a direct socket mount |
+| Networks | Backend and monitoring networks are internal |
+| CI/CD permissions | Workflow-level `contents: read`; package write only in the build job |
+| PR validation | Pull requests run tests, audits, Compose validation, Ansible syntax validation, and Docker image build |
+| Deploy trigger | Production deploy is manual and should be protected by a GitHub environment |
+| Secrets | Real secrets live in GitHub Actions and `/opt/qresto/.env`, never in Git |
+| SSH | Password login and root login are disabled by Ansible |
+| Firewall | UFW exposes only SSH, HTTP, and HTTPS |
 
-1. Push do galezi roboczej -> test + build + push do GHCR + Telegram.
-2. Push/Merge do `main` -> automatyczny deploy na VPS + Telegram.
-3. `docker compose ps` na VPS (status uslug).
-4. `curl https://<domena>/health` (status aplikacji).
-5. Wejscie do Zabbix i podglad hosta/web scenarios/triggerow.
-6. `bash scripts/traffic-mode.sh high` i pokaz wielu replik app.
+## Known Trade-Offs
 
-## 4. Twarde argumenty na pytania komisji
+- The deploy user belongs to the `docker` group. This is common for small VPS deployments, but it is a high-trust permission.
+- Zabbix Agent2 reads host and Docker metadata. It is not privileged and uses read-only mounts, but it still has broader visibility than a pure application container.
+- The included app tests are intentionally small. For a real SaaS project, route, auth, upload, and database integration tests should be expanded.
+- Backups are local by default. Production should add off-site encrypted backups.
 
-- Dlaczego IaC jest idempotentne:
-  - Ansible zadania deklaratywne (`state: present`, `lineinfile`, `cron`, `ufw`).
-- Jak minimalizujemy ekspozycje:
-  - publicznie tylko 80/443 przez Traefik;
-  - Mongo bez mapowania portu;
-  - Zabbix server mapowany tylko na localhost hosta (`127.0.0.1:10051`).
-- Jak dbamy o operacje:
-  - backup plikow + dump Mongo (`scripts/backup.sh`);
-  - healthcheck cron + endpointy `/live`, `/ready`, `/health`.
-- Jak wyglada artefakt:
-  - obraz Docker publikowany do GHCR.
+## Interview Talking Points
 
-## 5. Ograniczenia (uczciwie, ale kontrolowanie)
-
-- Warstwa aplikacji jest MVP i nie udaje pelnego produktu komercyjnego.
-- Zakres pracy celowo skupiony na DevOps, automatyzacji i monitoringu.
-- Testy aplikacji sa podstawowe; kluczowe procesy operacyjne i wdrozeniowe sa zautomatyzowane.
+- Why deploy is manual instead of automatic from every push.
+- Why action versions are pinned by SHA.
+- Why `docker.sock` is proxied for Traefik.
+- Why `.env.example` contains placeholders and `.env` is ignored.
+- What `read_only`, `cap_drop`, `no-new-privileges`, and internal networks protect against.
+- What should be improved next: stronger tests, external backup storage, vulnerability scanning with Trivy, and GitHub branch protection.

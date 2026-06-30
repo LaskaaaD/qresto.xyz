@@ -1,14 +1,16 @@
-# Ignorowane foldery zależności
-app/node_modules
-node_modules
-npm-debug.log
-
-# Zmienne środowiskowe, których nie dodajemy do obrazu na twardo
-.env
-
-# Foldery wersjonowania i systemowe
 .git
 .github
-.idea
-.vscode
+node_modules
+**/node_modules
+.env
+.env.*
+!.env.example
+ansible
+docs
+scripts
+letsencrypt
+backups
+app/public/uploads
 *.md
+*.log
+npm-debug.log*

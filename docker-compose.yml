@@ -1,44 +1,76 @@
 services:
   traefik:
-    image: traefik:latest
-    container_name: traefik
+    image: traefik:v3.4.1@sha256:cd40ab7bc1f047731d5b22595203812343efcb6538014c4e93221cfc3a77217a
+    container_name: qresto_traefik
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:?set CF_DNS_API_TOKEN}
     command:
       - "--api.insecure=false"
       - "--providers.docker=true"
+      - "--providers.docker.endpoint=tcp://docker-proxy-traefik:2375"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=qresto_net"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--certificatesresolvers.myresolver.acme.email=${SSL_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.email=${SSL_EMAIL:?set SSL_EMAIL}"
       - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.myresolver.acme.dnschallenge=true"
       - "--certificatesresolvers.myresolver.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.myresolver.acme.dnschallenge.delaybeforecheck=10"
-    environment:
-      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./letsencrypt:/letsencrypt"
+    depends_on:
+      docker-proxy-traefik:
+        condition: service_started
     networks:
       - qresto_net
+      - docker-api-read
+
+  docker-proxy-traefik:
+    image: ghcr.io/tecnativa/docker-socket-proxy:v0.4.2@sha256:1f3a6f303320723d199d2316a3e82b2e2685d86c275d5e3deeaf182573b47476
+    container_name: qresto_docker_proxy_traefik
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /run:rw,noexec,nosuid,size=16m
+    environment:
+      CONTAINERS: 1
+      EVENTS: 1
+      INFO: 1
+      NETWORKS: 1
+      VERSION: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-api-read
 
   mongodb:
-    image: mongo:6.0
+    image: mongo:6.0@sha256:8b6d8f5bbedb25cb73517b65cf99f13aeb75ad5b157a56c479287a840bbad3ac
     container_name: qresto_mongo
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS}
-      MONGO_INITDB_DATABASE: ${MONGO_DB}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?set MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS:?set MONGO_PASS}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:?set MONGO_DB}
     volumes:
       - mongo_data:/data/db
     networks:
-      - qresto_net
+      - backend
 
   app:
     image: ${APP_IMAGE:-qresto-app:local}
@@ -46,68 +78,81 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    volumes:
+      - app_uploads:/usr/src/app/public/uploads
     depends_on:
-      - mongodb
-    mem_limit: 768m
-    cpus: "1.0"
+      mongodb:
+        condition: service_started
+    deploy:
+      replicas: ${APP_REPLICAS:-1}
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.0"
     environment:
+      - NODE_ENV=${NODE_ENV:-production}
       - PORT=3000
-      - MONGODB_URI=${MONGODB_URI}
-      - SESSION_SECRET=${SESSION_SECRET}
-      - ROOT_DOMAIN=${ROOT_DOMAIN}
-      - APP_DOMAIN=${APP_DOMAIN}
-      - APP_WWW_DOMAIN=${APP_WWW_DOMAIN}
+      - MONGODB_URI=${MONGODB_URI:?set MONGODB_URI}
+      - SESSION_SECRET=${SESSION_SECRET:?set SESSION_SECRET}
+      - ROOT_DOMAIN=${ROOT_DOMAIN:?set ROOT_DOMAIN}
+      - APP_DOMAIN=${APP_DOMAIN:?set APP_DOMAIN}
+      - APP_WWW_DOMAIN=${APP_WWW_DOMAIN:?set APP_WWW_DOMAIN}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=(Host(`${APP_DOMAIN}`) || Host(`${APP_WWW_DOMAIN}`) || HostRegexp(`{subdomain:[a-z0-9-]+}.${ROOT_DOMAIN}`)) && !Host(`${ZABBIX_DOMAIN}`)"
+      - "traefik.http.routers.app.rule=(Host(`${APP_DOMAIN:?set APP_DOMAIN}`) || Host(`${APP_WWW_DOMAIN:?set APP_WWW_DOMAIN}`) || HostRegexp(`[a-z0-9-]+\\.${ROOT_DOMAIN_REGEX:?set ROOT_DOMAIN_REGEX}`)) && !Host(`${ZABBIX_DOMAIN:?set ZABBIX_DOMAIN}`)"
       - "traefik.http.routers.app.priority=1"
       - "traefik.http.routers.app.entrypoints=websecure"
       - "traefik.http.routers.app.tls.certresolver=myresolver"
-      - "traefik.http.routers.app.tls.domains[0].main=${ROOT_DOMAIN}"
-      - "traefik.http.routers.app.tls.domains[0].sans=*.${ROOT_DOMAIN}"
+      - "traefik.http.routers.app.tls.domains[0].main=${ROOT_DOMAIN:?set ROOT_DOMAIN}"
+      - "traefik.http.routers.app.tls.domains[0].sans=*.${ROOT_DOMAIN:?set ROOT_DOMAIN}"
       - "traefik.http.services.app.loadbalancer.server.port=3000"
-      - "traefik.docker.network=qresto_net"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
-        ]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/live',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 20s
     networks:
       - qresto_net
+      - backend
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
         max-size: "20m"
         max-file: "5"
 
   zabbix-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:cd17e2ac98240fce1541ad2a803b34009b4eea5aec8a832363cdc7eca62e722e
     container_name: qresto_zabbix_db
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
-      POSTGRES_USER: ${ZABBIX_DB_USER}
-      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS}
+      POSTGRES_USER: ${ZABBIX_DB_USER:?set ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS:?set ZABBIX_DB_PASS}
       POSTGRES_DB: zabbix
     volumes:
       - zabbix_db_data:/var/lib/postgresql/data
     networks:
-      - qresto_net
+      - monitoring
 
   zabbix-server:
-    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest@sha256:664daf2499270a1345a3140234516b73345dc9d4f5e24ef96199adb8f513e871
     container_name: qresto_zabbix_server
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       DB_SERVER_HOST: zabbix-db
-      POSTGRES_USER: ${ZABBIX_DB_USER}
-      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS}
+      POSTGRES_USER: ${ZABBIX_DB_USER:?set ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS:?set ZABBIX_DB_PASS}
       POSTGRES_DB: zabbix
       ZBX_STARTPOLLERS: 10
       ZBX_STARTHTTPPOLLERS: 5
@@ -117,36 +162,44 @@ services:
     ports:
       - "127.0.0.1:10051:10051"
     networks:
-      - qresto_net
+      - monitoring
 
   zabbix-agent2:
-    image: zabbix/zabbix-agent2:alpine-7.0-latest
+    image: zabbix/zabbix-agent2:alpine-7.0-latest@sha256:60ba27467ca61b17dd7cb6a061ab3b366b6a2c39722bf5eb580c7ae005de197b
     container_name: qresto_zabbix_agent2
     restart: unless-stopped
     user: root
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
     environment:
       ZBX_SERVER_HOST: zabbix-server
-      ZBX_HOSTNAME: ${ZABBIX_HOSTNAME}
+      ZBX_HOSTNAME: ${ZABBIX_HOSTNAME:?set ZABBIX_HOSTNAME}
       ZBX_DEBUGLEVEL: 3
-      ZBX_ALLOWUNSAFEUSERPARAM: 1
+      ZBX_ALLOWUNSAFEUSERPARAM: 0
     pid: host
-    privileged: true
     volumes:
       - /:/hostfs:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - zabbix-server
     networks:
-      - qresto_net
+      - monitoring
 
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest@sha256:b835eaa86f61027d66c785d415825e1f91150e7ef65855c1c2611efd48cf92a8
     container_name: qresto_zabbix_web
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       DB_SERVER_HOST: zabbix-db
-      POSTGRES_USER: ${ZABBIX_DB_USER}
-      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS}
+      POSTGRES_USER: ${ZABBIX_DB_USER:?set ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASS:?set ZABBIX_DB_PASS}
       POSTGRES_DB: zabbix
       ZBX_SERVER_HOST: zabbix-server
       PHP_TZ: Europe/Warsaw
@@ -155,20 +208,30 @@ services:
       - zabbix-server
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.zabbix.rule=Host(`${ZABBIX_DOMAIN}`)"
+      - "traefik.http.routers.zabbix.rule=Host(`${ZABBIX_DOMAIN:?set ZABBIX_DOMAIN}`)"
       - "traefik.http.routers.zabbix.priority=100"
       - "traefik.http.routers.zabbix.entrypoints=websecure"
       - "traefik.http.routers.zabbix.tls.certresolver=myresolver"
       - "traefik.http.services.zabbix.loadbalancer.server.port=8080"
-      - "traefik.docker.network=qresto_net"
     networks:
       - qresto_net
+      - monitoring
 
 networks:
   qresto_net:
     driver: bridge
     name: qresto_net
+  backend:
+    driver: bridge
+    internal: true
+  monitoring:
+    driver: bridge
+    internal: true
+  docker-api-read:
+    driver: bridge
+    internal: true
 
 volumes:
   mongo_data:
   zabbix_db_data:
+  app_uploads:

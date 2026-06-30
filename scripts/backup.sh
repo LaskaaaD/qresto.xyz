@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Automatyczny backup MongoDB + kluczowych plików wdrożeniowych QResto
 APP_DIR="/opt/qresto"
 BACKUP_DIR="/var/backups/qresto"
 DATE_TAG="$(date +"%Y-%m-%d_%H-%M-%S")"
@@ -14,7 +13,7 @@ cleanup() {
 trap cleanup EXIT
 
 if [ ! -f "$APP_DIR/.env" ]; then
-  echo "[BŁĄD] Brak pliku $APP_DIR/.env"
+  echo "[ERROR] Missing $APP_DIR/.env"
   exit 1
 fi
 
@@ -36,7 +35,7 @@ load_env_file "$APP_DIR/.env"
 
 for key in MONGO_USER MONGO_PASS MONGO_DB; do
   if [ -z "${!key:-}" ]; then
-    echo "[BŁĄD] Brak zmiennej $key w $APP_DIR/.env"
+    echo "[ERROR] Missing $key in $APP_DIR/.env"
     exit 1
   fi
 done
@@ -58,7 +57,7 @@ cp "$APP_DIR/letsencrypt/acme.json" "$WORK_DIR/acme.json"
 
 tar -czf "$BACKUP_DIR/$ARCHIVE_NAME" -C "$WORK_DIR" .
 
-echo "[OK] Backup wykonany: $BACKUP_DIR/$ARCHIVE_NAME"
+echo "[OK] Backup created: $BACKUP_DIR/$ARCHIVE_NAME"
 
-# Opcjonalnie: retencja 14 dni
+# Optional 14-day local retention:
 # find "$BACKUP_DIR" -type f -name "qresto_backup_*.tar.gz" -mtime +14 -delete

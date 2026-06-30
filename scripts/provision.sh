@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")"/..
+cd "$(dirname "$0")/.."
 
-echo "====== QRESTO VPS PROVISIONING ======"
+echo "====== QResto VPS provisioning ======"
 
 if ! command -v ansible-playbook >/dev/null 2>&1; then
-  echo "[BŁĄD] Brak narzędzia 'ansible-playbook'."
-  echo "Zainstaluj Ansible i uruchom skrypt ponownie."
+  echo "[ERROR] ansible-playbook was not found."
+  echo "Install Ansible and run this script again."
   exit 1
+fi
+
+if command -v ansible-galaxy >/dev/null 2>&1; then
+  ansible-galaxy collection install -r ansible/requirements.yml
 fi
 
 prompt_default() {
@@ -24,31 +28,34 @@ prompt_default() {
   echo "$result"
 }
 
+escape_regex() {
+  printf '%s' "$1" | sed -e 's/[.[\*^$()+?{}|]/\\&/g'
+}
+
 SERVER_IP=""
 while [ -z "$SERVER_IP" ]; do
-  read -r -p "Podaj IP VPS: " SERVER_IP
+  read -r -p "VPS IP address: " SERVER_IP
   if [ -z "$SERVER_IP" ]; then
-    echo "[BŁĄD] IP nie może być puste."
+    echo "[ERROR] VPS IP address cannot be empty."
   fi
 done
 
-SSH_USER="$(prompt_default "Podaj użytkownika SSH do pierwszego połączenia" "root")"
-SSH_PORT="$(prompt_default "Podaj port SSH do pierwszego połączenia" "22")"
+SSH_USER="$(prompt_default "Initial SSH user" "root")"
+SSH_PORT="$(prompt_default "Initial SSH port" "22")"
 if [[ ! "$SSH_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_PORT" -lt 1 ] || [ "$SSH_PORT" -gt 65535 ]; then
-  echo "[BŁĄD] Niepoprawny port SSH: $SSH_PORT"
+  echo "[ERROR] Invalid SSH port: $SSH_PORT"
   exit 1
 fi
 
-TARGET_SSH_PORT="$(prompt_default "Podaj docelowy port SSH po hardeningu" "$SSH_PORT")"
+TARGET_SSH_PORT="$(prompt_default "Target SSH port after hardening" "$SSH_PORT")"
 if [[ ! "$TARGET_SSH_PORT" =~ ^[0-9]+$ ]] || [ "$TARGET_SSH_PORT" -lt 1 ] || [ "$TARGET_SSH_PORT" -gt 65535 ]; then
-  echo "[BŁĄD] Niepoprawny docelowy port SSH: $TARGET_SSH_PORT"
+  echo "[ERROR] Invalid target SSH port: $TARGET_SSH_PORT"
   exit 1
 fi
 
-SSH_PRIVATE_KEY="$(prompt_default "Podaj ścieżkę do klucza prywatnego SSH" "$HOME/.ssh/id_ed25519")"
-
+SSH_PRIVATE_KEY="$(prompt_default "SSH private key path" "$HOME/.ssh/id_ed25519")"
 if [ ! -f "$SSH_PRIVATE_KEY" ]; then
-  echo "[BŁĄD] Nie znaleziono klucza prywatnego: $SSH_PRIVATE_KEY"
+  echo "[ERROR] Private key not found: $SSH_PRIVATE_KEY"
   exit 1
 fi
 
@@ -56,39 +63,40 @@ DEFAULT_PUB_KEY="$SSH_PRIVATE_KEY.pub"
 if [ ! -f "$DEFAULT_PUB_KEY" ]; then
   DEFAULT_PUB_KEY="$HOME/.ssh/id_ed25519.pub"
 fi
-SSH_PUBLIC_KEY="$(prompt_default "Podaj ścieżkę do klucza publicznego (dla nowego usera deploy)" "$DEFAULT_PUB_KEY")"
 
+SSH_PUBLIC_KEY="$(prompt_default "Deploy user's SSH public key path" "$DEFAULT_PUB_KEY")"
 if [ ! -f "$SSH_PUBLIC_KEY" ]; then
-  echo "[BŁĄD] Nie znaleziono klucza publicznego: $SSH_PUBLIC_KEY"
+  echo "[ERROR] Public key not found: $SSH_PUBLIC_KEY"
   exit 1
 fi
 
-DEPLOY_USER="$(prompt_default "Podaj nazwę docelowego użytkownika deploy" "qresto_user")"
+DEPLOY_USER="$(prompt_default "Deploy username" "qresto")"
 if [[ ! "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
-  echo "[BŁĄD] Niepoprawna nazwa użytkownika: $DEPLOY_USER"
+  echo "[ERROR] Invalid deploy username: $DEPLOY_USER"
   exit 1
 fi
 
 ROOT_DOMAIN=""
 while [ -z "$ROOT_DOMAIN" ]; do
-  read -r -p "Podaj domenę główną (np. qresto.xyz): " ROOT_DOMAIN
+  read -r -p "Root domain, for example qresto.xyz: " ROOT_DOMAIN
   if [ -z "$ROOT_DOMAIN" ]; then
-    echo "[BŁĄD] Domena główna nie może być pusta."
+    echo "[ERROR] Root domain cannot be empty."
   fi
 done
 
-APP_DOMAIN="$(prompt_default "Podaj domenę aplikacji" "$ROOT_DOMAIN")"
-APP_WWW_DOMAIN="$(prompt_default "Podaj domenę WWW" "www.$ROOT_DOMAIN")"
-ZABBIX_DOMAIN="$(prompt_default "Podaj domenę Zabbix" "zabbix.$ROOT_DOMAIN")"
-SSL_EMAIL="$(prompt_default "Podaj e-mail dla certyfikatów Let's Encrypt" "admin@$ROOT_DOMAIN")"
+APP_DOMAIN="$(prompt_default "Application domain" "$ROOT_DOMAIN")"
+APP_WWW_DOMAIN="$(prompt_default "WWW domain" "www.$ROOT_DOMAIN")"
+ZABBIX_DOMAIN="$(prompt_default "Zabbix domain" "zabbix.$ROOT_DOMAIN")"
+SSL_EMAIL="$(prompt_default "Let's Encrypt e-mail" "admin@$ROOT_DOMAIN")"
+ROOT_DOMAIN_REGEX="$(escape_regex "$ROOT_DOMAIN")"
 
-echo "[INFO] Tworzę ansible/inventory dla hosta $SERVER_IP"
-cat > ansible/inventory <<EOF
-[vps]
-target ansible_host=$SERVER_IP ansible_port=$SSH_PORT ansible_ssh_private_key_file=$SSH_PRIVATE_KEY
-EOF
+echo "[INFO] Writing ansible/inventory for $SERVER_IP"
+{
+  echo "[vps]"
+  echo "target ansible_host=$SERVER_IP ansible_port=$SSH_PORT ansible_ssh_private_key_file=$SSH_PRIVATE_KEY"
+} > ansible/inventory
 
-echo "[INFO] Uruchamiam Ansible provisioning..."
+echo "[INFO] Running Ansible provisioning..."
 ansible-playbook -i ansible/inventory ansible/setup.yml \
   -e "ansible_user=$SSH_USER" \
   -e "ansible_become=yes" \
@@ -96,18 +104,21 @@ ansible-playbook -i ansible/inventory ansible/setup.yml \
   -e "deploy_user=$DEPLOY_USER" \
   -e "ssh_port=$TARGET_SSH_PORT" \
   -e "deploy_ssh_pub_key=$SSH_PUBLIC_KEY" \
+  -e "root_domain=$ROOT_DOMAIN" \
+  -e "root_domain_regex=$ROOT_DOMAIN_REGEX" \
   -e "app_domain=$APP_DOMAIN" \
   -e "app_www_domain=$APP_WWW_DOMAIN" \
   -e "zabbix_domain=$ZABBIX_DOMAIN" \
   -e "ssl_email=$SSL_EMAIL"
 
 echo "======================================="
-echo "SUKCES: serwer został przygotowany."
-echo "Użytkownik deploy: $DEPLOY_USER"
-echo "Szablon /opt/qresto/.env.bootstrap jest gotowy na VPS"
-echo "Następny krok:"
-echo "1) zaloguj się na VPS i skopiuj /opt/qresto/.env.bootstrap do /opt/qresto/.env"
-echo "2) uzupełnij CF_DNS_API_TOKEN, TELEGRAM_BOT_TOKEN i TELEGRAM_CHAT_ID w pliku .env"
-echo "3) zmień hasła CHANGE_ME_* w pliku .env"
-echo "4) ustaw GitHub Secret VPS_SSH_USER=$DEPLOY_USER"
-echo "5) ustaw GitHub Secret VPS_SSH_PORT=$TARGET_SSH_PORT"
+echo "Success: the VPS baseline is ready."
+echo "Deploy user: $DEPLOY_USER"
+echo "Bootstrap template: /opt/qresto/.env.bootstrap"
+echo
+echo "Next steps:"
+echo "1. SSH into the VPS as $DEPLOY_USER on port $TARGET_SSH_PORT."
+echo "2. Copy /opt/qresto/.env.bootstrap to /opt/qresto/.env."
+echo "3. Fill every placeholder secret in /opt/qresto/.env."
+echo "4. Add GitHub Actions secrets: VPS_HOST, VPS_SSH_USER, VPS_SSH_KEY, VPS_SSH_PORT."
+echo "5. Trigger the production deploy manually from GitHub Actions."

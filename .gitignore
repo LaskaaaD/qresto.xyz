@@ -1,7 +1,29 @@
+# Dependencies
 node_modules/
-.env
-.DS_Store
-ansible/inventory
+**/node_modules/
+pnpm-lock.yaml
+yarn.lock
 
-# Pliki certyfikat�w SSL Traefik
+# Environment and generated secrets
+.env
+.env.*
+!.env.example
+ansible/inventory
+ansible/.vault-pass
+ansible/inventories/**/hosts.yml
+ansible/inventories/**/group_vars/vault.yml
+
+# Runtime data
+app/public/uploads/
 letsencrypt/acme.json
+backups/
+*.dump
+*.tar.gz
+
+# Logs and OS/editor files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

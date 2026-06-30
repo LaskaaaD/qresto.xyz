@@ -1,21 +1,21 @@
-# Używamy lekkiego obrazu bazowego Alpine w wersji Node 20
-FROM node:20-alpine
+FROM node:20.19.0-alpine3.20@sha256:9a9c00587bcb88209b164b2dba1f59c7389ac3a2cec2cfe490fc43cd947ed531
 
-# Ustawienie katalogu roboczego w kontenerze
+ENV NODE_ENV=production
 WORKDIR /usr/src/app
 
-# Kopiowanie plików definicji pakietów z katalogu aplikacji
-# Gwiazdka (*) sprawia, że kopiujemy zarówno package.json jak i package-lock.json (jeśli istnieje)
 COPY app/package*.json ./
+RUN npm ci --omit=dev
 
-# Instalacja tylko niezbędnych paczek produkcyjnych
-RUN npm install --production
-
-# Skopiowanie całej warstwy logiki z katalogu \`app\` z pominięciem node_modules dzięki .dockerignore
 COPY app/ .
 
-# Aplikacja działa na porcie 3000
+RUN mkdir -p /usr/src/app/public/uploads \
+  && chown -R node:node /usr/src/app
+
+USER node
+
 EXPOSE 3000
 
-# Komenda uruchomieniowa (plikiem wejściowym jest server.js)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/live', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
 CMD ["node", "server.js"]
